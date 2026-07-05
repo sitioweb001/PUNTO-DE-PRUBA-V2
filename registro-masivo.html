@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#091933">
+  <title>Registro Masivo de Productos — ERP POS LITE</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #055de2; --primary-dark: #091933; --primary-light: #e8f2fc;
+      --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ffc107;
+      --bg-body: #f4f6f9; --bg-card: #ffffff; --bg-sidebar: #091933;
+      --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body.dark-mode {
+      --bg-body: #0f172a; --bg-card: #1e293b; --bg-sidebar: #020817;
+      --text-main: #e2e8f0; --text-muted: #94a3b8; --border-color: #334155;
+      --primary-light: #1e3a5f;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; }
+    body { font-family:'Inter', -apple-system, sans-serif; background:var(--bg-body); color:var(--text-main); transition:background .3s, color .3s; }
+
+    .topbar { background:var(--bg-sidebar); color:#fff; padding:1rem 1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .topbar h1 { font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:10px; }
+    .topbar a.volver { color:rgba(255,255,255,0.75); text-decoration:none; font-size:0.85rem; display:flex; align-items:center; gap:6px; }
+    .topbar a.volver:hover { color:#fff; }
+
+    .wrap { max-width:920px; margin:0 auto; padding:1.5rem; }
+    .card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.5rem; margin-bottom:1.5rem; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .text-muted { color:var(--text-muted); }
+
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-top:1rem; }
+    .form-group label { display:block; margin-bottom:6px; font-weight:600; font-size:.85rem; }
+    .form-group input, .form-group select { width:100%; padding:10px 12px; border:1px solid var(--border-color); border-radius:var(--radius); background:var(--bg-card); color:var(--text-main); font-size:.9rem; }
+    .form-group input:focus, .form-group select:focus { outline:none; border-color:var(--primary-color); }
+    .full-width { grid-column:1 / -1; }
+
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border:none; border-radius:var(--radius); font-weight:600; cursor:pointer; transition:background .2s; font-size:.9rem; }
+    .primary-btn { background:var(--primary-color); color:#fff; }
+    .primary-btn:hover { background:#044bc5; }
+    .secondary-btn { background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); }
+    .secondary-btn:hover { background:var(--primary-light); }
+    .danger-btn { background:var(--danger-color); color:#fff; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+    .data-table-container { overflow-x:auto; border:1px solid var(--border-color); border-radius:var(--radius-lg); margin-top:1rem; }
+    .data-table { width:100%; border-collapse:collapse; min-width:600px; }
+    .data-table th, .data-table td { padding:10px 14px; border-bottom:1px solid var(--border-color); text-align:left; font-size:.85rem; }
+    .data-table th { background:var(--primary-dark); color:#fff; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+    .data-table tbody tr:nth-child(even) { background:rgba(0,0,0,.02); }
+    body.dark-mode .data-table tbody tr:nth-child(even) { background:rgba(255,255,255,.02); }
+
+    .badge { display:inline-flex; align-items:center; justify-content:center; background:var(--primary-color); color:#fff; border-radius:20px; font-size:.72rem; font-weight:700; min-width:22px; height:22px; padding:0 8px; }
+
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:2000; padding:1rem; }
+    .modal-content { background:var(--bg-card); border-radius:var(--radius-lg); width:100%; max-width:420px; padding:1.25rem; text-align:center; max-height:90vh; overflow-y:auto; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; font-weight:bold; }
+    .modal-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--text-muted); }
+    .hidden { display:none !important; }
+
+    .toast-container { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.75rem; max-width:340px; width:calc(100% - 2.5rem); }
+    .toast { background:var(--primary-dark); color:#fff; padding:14px 18px; border-radius:var(--radius-lg); font-weight:600; box-shadow:0 10px 15px -3px rgba(0,0,0,.2); display:flex; align-items:center; gap:10px; opacity:0; transform:translateY(-16px); transition:all .3s cubic-bezier(.34,1.56,.64,1); font-size:.88rem; }
+    .toast.show { opacity:1; transform:translateY(0); }
+    .toast-success { border-left:5px solid var(--success-color); background:#0c192e; }
+    .toast-error { border-left:5px solid var(--danger-color); background:#220e10; }
+    .toast-warning { border-left:5px solid var(--warning-color); background:#241d07; }
+
+    .spinner-overlay { position:fixed; inset:0; background:rgba(9,25,51,.6); z-index:5000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; }
+    .spinner-ring { width:48px; height:48px; border:4px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:spin .75s linear infinite; }
+    .spinner-label { color:#fff; font-size:.85rem; font-weight:600; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .actions-bar { display:flex; gap:10px; flex-wrap:wrap; margin-top:1.25rem; }
+    .btn-icon-mini { width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; border:none; cursor:pointer; background:rgba(220,53,69,.1); color:var(--danger-color); }
+
+    @media (max-width:640px) {
+      .form-grid { grid-template-columns:1fr; }
+      .modal-content { max-width:100% !important; margin:0 .5rem; padding:1rem; }
+      /* Limitamos aún más la altura del visor de cámara en móvil para que
+         el modal completo (controles + botón cerrar) quepa en pantalla sin
+         que la cámara tape toda la vista */
+      #interactiveScanner { height: min(38vh, 260px) !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1><i class="fas fa-barcode"></i> Registro Masivo de Productos</h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <button class="btn secondary-btn" style="padding:6px 12px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Modo Oscuro</button>
+      <a class="volver" href="index.html"><i class="fas fa-arrow-left"></i> Volver al sistema</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="card">
+      <h2><i class="fas fa-box-open"></i> Registrar Nuevo Producto</h2>
+      <p class="text-muted" style="font-size:.85rem; margin-top:4px;">Escanea o escribe cada producto y agrégalo a la lista. Cuando termines, regístralos todos de un solo en la base de datos, o descarga un CSV para subirlo después en el Importador Masivo.</p>
+
+      <form id="productoForm" class="form-grid">
+        <div class="form-group">
+          <label>Código de Barras:</label>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="p_codigo" required placeholder="Escribe o escanea...">
+            <button type="button" class="btn secondary-btn" onclick="activarCamaraEscaneo()" style="padding:0 12px;"><i class="fas fa-camera"></i></button>
+          </div>
+        </div>
+        <div class="form-group"><label>Nombre del Producto:</label><input type="text" id="p_nombre" required></div>
+        <div class="form-group"><label>Categoría:</label><select id="p_categoria" required><option value="">Seleccione...</option></select></div>
+        <div class="form-group"><label>Stock Inicial:</label><input type="number" id="p_stock" required min="0" value="0"></div>
+        <div class="form-group"><label>Precio de Compra ($):</label><input type="number" id="p_precio_compra" required min="0" step="0.01"></div>
+        <div class="form-group"><label>Precio de Venta ($):</label><input type="number" id="p_precio_venta" required min="0" step="0.01"></div>
+        <div class="full-width"><button type="submit" class="btn primary-btn"><i class="fas fa-plus"></i> Agregar a la Lista</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <h3><i class="fas fa-list-ol"></i> Productos en cola <span class="badge" id="contadorPendientes">0</span></h3>
+        <button class="btn secondary-btn" style="padding:6px 12px; font-size:.8rem;" onclick="vaciarLista()"><i class="fas fa-broom"></i> Vaciar lista</button>
+      </div>
+
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead><tr><th>Nombre</th><th>Código</th><th>Categoría</th><th>Stock</th><th>P.Compra</th><th>P.Venta</th><th></th></tr></thead>
+          <tbody id="pendientesBody"><tr><td colspan="7" class="text-muted" style="text-align:center; padding:1.5rem;">Aún no has agregado productos.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="actions-bar">
+        <button class="btn primary-btn" id="btnRegistrarTodo" onclick="registrarTodoEnBD()" disabled><i class="fas fa-cloud-upload-alt"></i> Registrar Todo en la Base de Datos</button>
+        <button class="btn secondary-btn" id="btnDescargarCSV" onclick="descargarCSV()" disabled><i class="fas fa-file-csv"></i> Descargar CSV</button>
+      </div>
+      <p class="text-muted" style="font-size:.78rem; margin-top:.6rem;">El CSV descargado puede subirse luego en <b>Importador Masivo → Ejecutar</b> dentro del sistema.</p>
+    </div>
+
+  </div>
+
+  <!-- Modal escáner -->
+  <div id="scannerModal" class="modal hidden">
+    <div class="modal-content" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 style="margin:0;"><i class="fas fa-camera"></i> Escanear Código</h3>
+        <button class="modal-close" onclick="detenerCamaraEscaneo()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:8px;">
+        <div class="form-group" id="cameraSelectGroup" style="display:none; text-align:left; margin:0; flex:1;">
+          <label style="font-size:.8rem;">Seleccionar Cámara:</label>
+          <select id="cameraSelect" onchange="cambiarCamaraEscaneo()"></select>
+        </div>
+        <button id="btnLinterna" onclick="alternarLinterna()" class="btn secondary-btn" style="display:none; height:38px; padding:0 12px;" title="Encender/apagar linterna (ayuda a la lectura automática con poca luz)">
+          <i class="fas fa-bolt"></i>
+        </button>
+      </div>
+
+      <!-- Estado/diagnóstico del arranque de cámara -->
+      <div id="scannerStatusMsg" style="display:none; font-size:.8rem; padding:8px 10px; border-radius:6px; margin-bottom:8px; text-align:left;"></div>
+
+      <!-- Controles de imagen para webcam de baja calidad -->
+      <div id="scannerControls" style="display:none; margin-bottom:8px; background:rgba(0,0,0,0.06); border-radius:8px; padding:8px 10px; text-align:left;">
+        <div style="font-size:.72rem; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">🔧 Mejoras de imagen</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Brillo</label>
+            <input type="range" id="ctrl_brightness" min="0.5" max="3" step="0.1" value="1.4"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Contraste</label>
+            <input type="range" id="ctrl_contrast" min="0.5" max="4" step="0.1" value="2"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Nitidez</label>
+            <input type="range" id="ctrl_sharpen" min="0" max="5" step="0.5" value="1"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Escala de grises</label>
+            <input type="range" id="ctrl_grayscale" min="0" max="1" step="0.1" value="0"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+        </div>
+        <button onclick="resetearFiltros()" style="margin-top:6px; font-size:.72rem; background:none; border:none; color:var(--primary-color); cursor:pointer; padding:0; font-weight:600;">↺ Restablecer</button>
+      </div>
+
+      <div id="interactiveScanner" style="width:100%; height:min(46vh, 300px); background:#000; border-radius:8px; overflow:hidden; margin:0 auto .5rem; display:flex; align-items:center; justify-content:center;"></div>
+
+      <!-- Modo foto: captura manual de respaldo para webcams que no enfocan en movimiento -->
+      <div style="display:flex; gap:8px; margin-bottom:.5rem;">
+        <button class="btn danger-btn" onclick="detenerCamaraEscaneo()" style="flex:1; height:42px;"><i class="fas fa-power-off"></i> Cerrar</button>
+        <button class="btn secondary-btn" onclick="capturarFotoYLeer()" id="btnFotoCaptura" style="flex:1; height:42px;" title="Congela el frame actual y lo analiza con más tiempo (respaldo manual)">
+          <i class="fas fa-camera-retro"></i> Capturar foto
+        </button>
+      </div>
+      <canvas id="scanCanvas" style="display:none;"></canvas>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+<script>
+  // ¡Debe ser el mismo SCRIPT_URL que usa index.html!
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbYNUf0--D2RVqFyaBZHFxQuClX6RBybuhK6kJU9Q02NZyICUIXEnUWIR1x25xMnfMrA/exec";
+  const STORAGE_KEY = 'rm_productos_pendientes';
+
+  let categoriasGlobal = [];
+  let pendientes = [];
+  let html5QrScanner = null;
+  let availableCameras = [];
+  let selectedCameraId = null;
+  let torchActivo = false;
+
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  let audioCtx;
+  function playBeep() {
+    try {
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'square'; o.frequency.value = 1000;
+      g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.1);
+    } catch(e) {}
+  }
+
+  function showToast(msg, type='success') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-exclamation-triangle'}"></i> <span>${msg}</span>`;
+    c.appendChild(t);
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+  }
+
+  function showSpinner(msg='Cargando...') {
+    let el = document.getElementById('spinnerOverlay');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'spinnerOverlay'; el.className = 'spinner-overlay';
+      el.innerHTML = `<div class="spinner-ring"></div><div class="spinner-label" id="spinnerLabel">${msg}</div>`;
+      document.body.appendChild(el);
+    } else { document.getElementById('spinnerLabel').textContent = msg; el.style.display = 'flex'; }
+  }
+  function hideSpinner() { const el = document.getElementById('spinnerOverlay'); if (el) el.style.display = 'none'; }
+
+  // ── PERSISTENCIA LOCAL DE LA LISTA EN COLA (para no perder el trabajo si se recarga la página por accidente) ──
+  function guardarPendientesLocal() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(pendientes)); } catch(e){} }
+  function cargarPendientesLocal() { try { pendientes = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { pendientes = []; } }
+
+  function renderTablaPendientes() {
+    const body = document.getElementById('pendientesBody');
+    document.getElementById('contadorPendientes').textContent = pendientes.length;
+    document.getElementById('btnRegistrarTodo').disabled = pendientes.length === 0;
+    document.getElementById('btnDescargarCSV').disabled = pendientes.length === 0;
+
+    if (!pendientes.length) {
+      body.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center; padding:1.5rem;">Aún no has agregado productos.</td></tr>';
+      return;
+    }
+    body.innerHTML = pendientes.map((p, i) => `
+      <tr>
+        <td><b>${p.nombre}</b></td>
+        <td><code>${p.codigo || '—'}</code></td>
+        <td>${p.categoria || '—'}</td>
+        <td>${p.stock}</td>
+        <td>$${parseFloat(p.precio_compra).toFixed(2)}</td>
+        <td>$${parseFloat(p.precio_venta).toFixed(2)}</td>
+        <td><button class="btn-icon-mini" onclick="eliminarDeLista(${i})" title="Quitar de la lista"><i class="fas fa-trash"></i></button></td>
+      </tr>
+    `).join('');
+  }
+
+  function eliminarDeLista(i) {
+    pendientes.splice(i, 1);
+    guardarPendientesLocal();
+    renderTablaPendientes();
+  }
+
+  function vaciarLista() {
+    if (!pendientes.length) return;
+    if (!confirm('¿Vaciar toda la lista de productos en cola? Esta acción no se puede deshacer.')) return;
+    pendientes = [];
+    guardarPendientesLocal();
+    renderTablaPendientes();
+    showToast('Lista vaciada.', 'warning');
+  }
+
+  document.getElementById('productoForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const item = {
+      codigo: document.getElementById('p_codigo').value.trim(),
+      nombre: document.getElementById('p_nombre').value.trim(),
+      categoria: document.getElementById('p_categoria').value,
+      stock: parseInt(document.getElementById('p_stock').value) || 0,
+      precio_compra: parseFloat(document.getElementById('p_precio_compra').value) || 0,
+      precio_venta: parseFloat(document.getElementById('p_precio_venta').value) || 0,
+    };
+    if (!item.nombre) return showToast('El nombre del producto es obligatorio.', 'warning');
+    if (!item.categoria) return showToast('Selecciona una categoría.', 'warning');
+    pendientes.push(item);
+    guardarPendientesLocal();
+    renderTablaPendientes();
+    showToast('Producto agregado a la lista.', 'success');
+    e.target.reset();
+    document.getElementById('p_stock').value = 0;
+    document.getElementById('p_codigo').focus();
+  });
+
+  // ── REGISTRAR TODO EN LA BASE DE DATOS (en un solo lote) ──
+  async function registrarTodoEnBD() {
+    if (!pendientes.length) return;
+    if (!confirm(`¿Registrar ${pendientes.length} producto(s) directamente en la base de datos?`)) return;
+    showSpinner('Registrando productos...');
+    try {
+      const res = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ action:'importarDatos', tipo:'productos', filas: pendientes }) }).then(r => r.json());
+      hideSpinner();
+      if (res.status === 'success') {
+        showToast(res.message || 'Productos registrados con éxito.', 'success');
+        pendientes = [];
+        guardarPendientesLocal();
+        renderTablaPendientes();
+      } else { showToast(res.message || 'Error al registrar los productos.', 'error'); }
+    } catch(e) { hideSpinner(); showToast('Error de conexión con el servidor.', 'error'); }
+  }
+
+  // ── DESCARGAR CSV (compatible con el Importador Masivo del sistema) ──
+  function descargarCSV() {
+    if (!pendientes.length) return;
+    const headers = ['nombre','codigo','categoria','precio_compra','precio_venta','stock'];
+    const escape = v => {
+      const s = String(v ?? '');
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+    };
+    const filas = pendientes.map(p => [p.nombre, p.codigo, p.categoria, p.precio_compra, p.precio_venta, p.stock].map(escape).join(','));
+    const csv = [headers.join(','), ...filas].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `productos_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    showToast('CSV descargado. Súbelo en Importador Masivo → Ejecutar.', 'success');
+  }
+
+  // ── CATEGORÍAS ──
+  async function cargarCategorias() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getCategorias`).then(r => r.json());
+      if (res.status === 'success') {
+        categoriasGlobal = res.data;
+        const sel = document.getElementById('p_categoria');
+        sel.innerHTML = '<option value="">Seleccione...</option>' + categoriasGlobal.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+      }
+    } catch(e) { showToast('No se pudo conectar con el servidor para cargar categorías.', 'error'); }
+  }
+
+  // ── ESCÁNER DE CÁMARA (MEJORADO, UNA LECTURA POR VEZ) ─────────────
+  //
+  // IMPORTANTE — por qué el LED prendía y se apagaba sin cargar nunca:
+  // Antes llamábamos a Html5Qrcode.getCameras() ANTES de start(). Esa función
+  // hace su propio getUserMedia() interno solo para leer las etiquetas de las
+  // cámaras, y apenas termina, detiene ese stream temporal. Justo después,
+  // start() volvía a pedir la cámara. En muchas webcams (sobre todo
+  // integradas, en Windows/Edge) el hardware no alcanza a liberarse entre
+  // una solicitud y la siguiente: la primera prende el LED y lo apaga
+  // (eso es lo que se veía), y la segunda solicitud falla en silencio
+  // ("Cannot start video source") porque el dispositivo seguía ocupado.
+  //
+  // Ahora arrancamos la cámara UNA SOLA VEZ, directo con start(), sin pedir
+  // la lista antes. Solo DESPUÉS de que el video ya está corriendo pedimos
+  // la lista de cámaras (con el stream real ya activo y estable) para llenar
+  // el selector, por si el usuario quiere cambiar de cámara manualmente.
+  //
+  // UNA LECTURA POR VEZ: en cuanto se detecta un código válido, se vuelca
+  // al campo "Código de Barras", suena el bip y la cámara SE CIERRA sola
+  // (igual que el escáner del POS) para que el usuario pueda completar el
+  // resto del formulario (nombre, categoría, precios) sin la cámara
+  // ocupando la pantalla. Cuando quiera escanear el siguiente producto,
+  // vuelve a tocar el botón de la cámara. El flag "escaneoResuelto" evita
+  // que el escaneo en vivo y el análisis de segundo plano procesen el
+  // mismo código dos veces si detectan casi al mismo tiempo.
+  let escaneoResuelto = false;
+  function registrarCodigoContinuo(decodedText) {
+    if (escaneoResuelto) return;
+    escaneoResuelto = true;
+
+    playBeep();
+    const input = document.getElementById('p_codigo');
+    input.value = decodedText;
+    input.style.transition = 'background-color .15s';
+    input.style.backgroundColor = 'rgba(40,167,69,0.25)';
+    setTimeout(() => { input.style.backgroundColor = ''; }, 350);
+
+    detenerCamaraEscaneo();
+    showToast('Código capturado: ' + decodedText, 'success');
+    document.getElementById('p_nombre').focus();
+  }
+
+  // ── ESCANEO MEJORADO EN SEGUNDO PLANO ──────────────────────────
+  // Los controles de brillo/contraste/nitidez/escala de grises SOLO
+  // afectan lo que el usuario VE (son un filtro CSS sobre el <video>).
+  // El motor de decodificación en vivo de html5-qrcode lee el video
+  // "crudo", sin esos filtros — por eso en webcams de baja calidad el
+  // celular decodifica al instante (mejor sensor/autoenfoque) pero la
+  // webcam no, aunque se vea perfecto en pantalla con los controles.
+  // Para arreglarlo de raíz: además del escaneo en vivo, cada pocos
+  // cientos de milisegundos capturamos un cuadro real, le aplicamos los
+  // filtros DE VERDAD (sobre un canvas, no solo visualmente) y lo
+  // decodificamos aparte. Es 100% automático, no requiere ningún botón.
+  let bgScanInterval = null;
+  let bgScanOcupado = false;
+  const BG_SCAN_INTERVALO_MS = 550;
+
+  function iniciarEscaneoMejoradoBackground() {
+    detenerEscaneoMejoradoBackground();
+    bgScanOcupado = false;
+    bgScanInterval = setInterval(ejecutarEscaneoMejoradoBackground, BG_SCAN_INTERVALO_MS);
+  }
+  function detenerEscaneoMejoradoBackground() {
+    if (bgScanInterval) { clearInterval(bgScanInterval); bgScanInterval = null; }
+    bgScanOcupado = false;
+  }
+  function ejecutarEscaneoMejoradoBackground() {
+    if (bgScanOcupado || escaneoResuelto || !html5QrScanner) return;
+    const video = document.querySelector('#interactiveScanner video');
+    if (!video || video.readyState < 2 || !video.videoWidth) return;
+    bgScanOcupado = true;
+    try {
+      const canvas = document.getElementById('scanCanvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      const b  = document.getElementById('ctrl_brightness')?.value || 1.4;
+      const c  = document.getElementById('ctrl_contrast')?.value   || 2;
+      const s  = document.getElementById('ctrl_sharpen')?.value    || 1;
+      const gr = document.getElementById('ctrl_grayscale')?.value  || 0;
+      const sharpenContrast = parseFloat(c) + parseFloat(s) * 0.3;
+      // Forzamos un mínimo de escala de grises para el análisis aunque el
+      // usuario no la haya subido: ayuda mucho al algoritmo de decodificación
+      // sin afectar lo que el usuario ve en pantalla (eso sigue siendo un
+      // filtro CSS aparte sobre el <video>).
+      ctx.filter = `brightness(${b}) contrast(${sharpenContrast}) grayscale(${Math.max(gr, 0.4)})`;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob || escaneoResuelto) { bgScanOcupado = false; return; }
+        const file = new File([blob], 'bg.png', { type: 'image/png' });
+        const tempScanner = new Html5Qrcode('scanCanvas', false);
+        tempScanner.scanFile(file, false).then((result) => {
+          try { tempScanner.clear(); } catch(e) {}
+          bgScanOcupado = false;
+          registrarCodigoContinuo(result);
+        }).catch(() => {
+          try { tempScanner.clear(); } catch(e) {}
+          bgScanOcupado = false;
+        });
+      }, 'image/png');
+    } catch(e) {
+      bgScanOcupado = false;
+    }
+  }
+
+  function activarCamaraEscaneo() {
+    const modal = document.getElementById('scannerModal');
+    const selectGroup = document.getElementById('cameraSelectGroup');
+    const select = document.getElementById('cameraSelect');
+    modal.classList.remove('hidden');
+    selectGroup.style.display = 'none';
+    select.innerHTML = '';
+    selectedCameraId = null;
+    escaneoResuelto = false;
+    ocultarEstadoCamara();
+
+    iniciarLectorCamara(null);
+  }
+
+  // Muestra/oculta un mensaje de estado DENTRO del modal (no solo un toast,
+  // que puede pasar desapercibido). Sirve para diagnosticar a simple vista
+  // qué está pasando sin tener que abrir la consola del navegador.
+  function mostrarEstadoCamara(texto, tipo) {
+    const el = document.getElementById('scannerStatusMsg');
+    if (!el) return;
+    el.textContent = texto;
+    el.style.display = 'block';
+    if (tipo === 'error') {
+      el.style.background = 'rgba(220,53,69,0.1)';
+      el.style.color = 'var(--danger-color)';
+    } else {
+      el.style.background = 'rgba(5,93,226,0.07)';
+      el.style.color = 'var(--text-main)';
+    }
+  }
+  function ocultarEstadoCamara() {
+    const el = document.getElementById('scannerStatusMsg');
+    if (el) { el.style.display = 'none'; el.textContent = ''; }
+  }
+
+  // Pide la lista de cámaras DESPUÉS de que el video ya está corriendo
+  // establemente, para no competir con el start() inicial.
+  function cargarListaCamarasParaSelector() {
+    const selectGroup = document.getElementById('cameraSelectGroup');
+    const select = document.getElementById('cameraSelect');
+    Html5Qrcode.getCameras().then(devices => {
+      if (!devices || !devices.length) return; // la cámara ya funciona; sin lista no se puede cambiar manualmente, pero no es un error
+      availableCameras = devices;
+      select.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || 'Cámara ' + d.id}</option>`).join('');
+      selectGroup.style.display = 'block';
+
+      let activeId = null;
+      try {
+        const video = document.querySelector('#interactiveScanner video');
+        const track = video && video.srcObject && video.srcObject.getVideoTracks()[0];
+        activeId = track && track.getSettings && track.getSettings().deviceId;
+      } catch(e) {}
+      if (activeId && devices.some(d => d.id === activeId)) {
+        selectedCameraId = activeId;
+      } else {
+        selectedCameraId = devices[0].id;
+      }
+      select.value = selectedCameraId;
+    }).catch(() => {
+      // No se pudo enumerar (raro con el stream ya activo). No es fatal.
+    });
+  }
+
+  function cambiarCamaraEscaneo() {
+    selectedCameraId = document.getElementById('cameraSelect').value;
+    safeStopScanner(() => {
+      // Pequeña pausa para darle tiempo al hardware a liberarse antes de
+      // volver a pedirlo (mismo motivo que el comentario de arriba).
+      setTimeout(() => iniciarLectorCamara(selectedCameraId), 350);
+    });
+  }
+
+  // Detiene html5QrScanner de forma segura. stop() puede LANZAR una excepción
+  // SÍNCRONA ("Cannot stop, scanner is not running or paused") cuando el
+  // escáner nunca llegó a arrancar bien — no es un rechazo de promesa, así
+  // que un simple .catch() no la atrapa. Por eso aquí se envuelve en try/catch
+  // y además se valida el estado antes de llamar a stop().
+  function safeStopScanner(callback) {
+    if (!html5QrScanner) { if (callback) callback(); return; }
+    const scanner = html5QrScanner;
+    const limpiarYContinuar = () => {
+      try { scanner.clear(); } catch(e) {}
+      if (callback) callback();
+    };
+    try {
+      let estado = null;
+      try { estado = scanner.getState ? scanner.getState() : null; } catch(e) {}
+      const corriendo = estado === null || // si no se puede consultar el estado, intentamos igual
+        (typeof Html5QrcodeScannerState !== 'undefined' &&
+          (estado === Html5QrcodeScannerState.SCANNING || estado === Html5QrcodeScannerState.PAUSED));
+      if (!corriendo) { limpiarYContinuar(); return; }
+      scanner.stop().then(limpiarYContinuar).catch(limpiarYContinuar);
+    } catch(e) {
+      limpiarYContinuar();
+    }
+  }
+
+  function iniciarLectorCamara(cameraId) {
+    const config = {
+      fps: 30,
+      // Caja de escaneo ADAPTATIVA: se calcula como proporción del tamaño
+      // real del video en cada dispositivo, en vez de un tamaño fijo en
+      // píxeles. Mejora notablemente la detección automática porque la
+      // caja siempre queda bien encuadrada sin importar la resolución.
+      qrbox: (viewfinderWidth, viewfinderHeight) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const w = Math.floor(minEdge * 0.82);
+        const h = Math.floor(w * 0.5); // proporción ancha, ideal para códigos de barras 1D
+        return { width: w, height: h };
+      },
+      aspectRatio: 1.333,
+      disableFlip: false,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.CODABAR,
+      ]
+    };
+
+    // Si cameraId viene null (arranque inicial, automático): empezamos por
+    // facingMode trasera — no depende de enumerar dispositivos antes, así
+    // que es la opción que evita la doble adquisición de cámara.
+    // Si cameraId viene con valor (el usuario eligió una cámara específica
+    // en el selector): se intenta esa primero.
+    const intentosConstraints = cameraId ? [
+      { deviceId: { exact: cameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      true, // último recurso: cualquier cámara disponible, sin restricciones
+    ] : [
+      { facingMode: { exact: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      { facingMode: 'environment' },
+      true, // por si el equipo no tiene cámara trasera (laptops, etc.)
+    ];
+
+    const onArranqueOk = () => {
+      ocultarEstadoCamara();
+      // Mostrar controles y aplicar mejoras por defecto
+      document.getElementById('scannerControls').style.display = 'block';
+      aplicarFiltrosCamara();
+      // Intentar activar enfoque continuo mediante la API de tracks, y
+      // detectar si la cámara soporta linterna (ayuda a la lectura
+      // automática en lugares con poca luz).
+      torchActivo = false;
+      const btnLinterna = document.getElementById('btnLinterna');
+      btnLinterna.style.display = 'none';
+      btnLinterna.classList.remove('primary-btn');
+      btnLinterna.classList.add('secondary-btn');
+      try {
+        const video = document.querySelector('#interactiveScanner video');
+        if (video && video.srcObject) {
+          const track = video.srcObject.getVideoTracks()[0];
+          if (track && track.applyConstraints) {
+            track.applyConstraints({ advanced: [{ focusMode: 'continuous', zoom: 1 }] }).catch(()=>{});
+          }
+          const capabilities = track && track.getCapabilities ? track.getCapabilities() : null;
+          if (capabilities && capabilities.torch) {
+            btnLinterna.style.display = 'inline-flex';
+          }
+        }
+      } catch(e) {}
+      // Recién ahora, con el video ya activo y estable, pedimos la lista
+      // de cámaras para llenar el selector.
+      if (!cameraId) cargarListaCamarasParaSelector();
+
+      // Arrancamos el análisis mejorado en segundo plano (aplica los
+      // filtros DE VERDAD sobre los píxeles, no solo visualmente).
+      iniciarEscaneoMejoradoBackground();
+    };
+
+    intentarArrancarCamara(intentosConstraints, 0, config, registrarCodigoContinuo, onArranqueOk, null);
+  }
+
+  // Intenta arrancar la cámara probando cada set de constraints en orden.
+  // Si uno falla (por ejemplo el dispositivo sigue ocupado del intento
+  // anterior), espera un instante y reintenta con el siguiente — la pausa
+  // es clave: reintentar de inmediato reproduce el mismo parpadeo de LED
+  // sin llegar a cargar el video, porque el hardware aún no se liberó.
+  //
+  // Incluye un "watchdog": si start() ni resuelve ni rechaza en 9s (algunas
+  // combinaciones de navegador/driver de cámara se quedan colgadas sin
+  // emitir error), se abandona ese intento y se pasa al siguiente en vez
+  // de quedarse esperando para siempre. Cada intento usa una instancia
+  // nueva de Html5Qrcode para no heredar un estado a medio iniciar.
+  function intentarArrancarCamara(intentos, idx, config, onDecoded, onArranqueOk, ultimoError) {
+    if (idx >= intentos.length) {
+      const esPermisoDenegado = ultimoError && (ultimoError.name === 'NotAllowedError' || ultimoError.name === 'PermissionDeniedError');
+      const esSinCamara = ultimoError && (ultimoError.name === 'NotFoundError' || ultimoError.name === 'DevicesNotFoundError');
+      const esTimeout = ultimoError && ultimoError.name === 'TimeoutError';
+      const msg = esPermisoDenegado
+        ? 'Permisos de cámara denegados. Toca el ícono de candado junto a la URL → Permisos → Cámara → Permitir, y vuelve a intentar.'
+        : esSinCamara ? 'No se encontraron cámaras en este dispositivo.'
+        : esTimeout ? 'El navegador no respondió a la solicitud de cámara. Es muy probable que esté bloqueada en la configuración del sitio, o que otra app/pestaña la esté usando.'
+        : 'No se pudo iniciar la cámara. Cierra otras apps/pestañas que puedan estar usándola e inténtalo de nuevo.';
+      console.error('[Escáner] Todos los intentos fallaron. Último error:', ultimoError);
+      mostrarEstadoCamara(msg, 'error');
+      showToast(msg, 'error');
+      safeStopScanner();
+      html5QrScanner = null;
+      return;
+    }
+
+    // Instancia nueva en cada intento (no reutilizamos una que pudo quedar
+    // a medio iniciar si el intento anterior se descartó por timeout).
+    try { if (html5QrScanner) html5QrScanner.clear(); } catch(e) {}
+    html5QrScanner = new Html5Qrcode("interactiveScanner");
+
+    console.log(`[Escáner] Intento ${idx + 1}/${intentos.length} — constraints:`, intentos[idx]);
+    mostrarEstadoCamara(
+      idx === 0 ? 'Solicitando acceso a la cámara...' : `Probando cámara alternativa (intento ${idx + 1} de ${intentos.length})...`,
+      'info'
+    );
+
+    let yaResuelto = false;
+    const startPromise = html5QrScanner.start(intentos[idx], config, onDecoded, () => {});
+
+    const watchdogId = setTimeout(() => {
+      if (yaResuelto) return;
+      yaResuelto = true;
+      const errTimeout = new Error('La cámara no respondió a tiempo.');
+      errTimeout.name = 'TimeoutError';
+      console.warn(`[Escáner] Intento ${idx + 1} sin respuesta tras 9s — se descarta y se pasa al siguiente.`);
+      intentarArrancarCamara(intentos, idx + 1, config, onDecoded, onArranqueOk, errTimeout);
+    }, 9000);
+
+    startPromise.then(() => {
+      if (yaResuelto) {
+        console.warn(`[Escáner] Intento ${idx + 1} respondió tarde (después del timeout); se ignora.`);
+        try { html5QrScanner && html5QrScanner.stop().catch(()=>{}); } catch(e) {}
+        return;
+      }
+      yaResuelto = true;
+      clearTimeout(watchdogId);
+      if (idx > 0) console.warn(`[Escáner] Cámara iniciada con constraints de respaldo (intento ${idx + 1}).`);
+      else console.log('[Escáner] Cámara iniciada correctamente.');
+      onArranqueOk();
+    }).catch((err) => {
+      if (yaResuelto) return;
+      yaResuelto = true;
+      clearTimeout(watchdogId);
+      console.warn(`[Escáner] Intento ${idx + 1} de iniciar cámara falló:`, (err && (err.name || err.message)) || err);
+      setTimeout(() => {
+        intentarArrancarCamara(intentos, idx + 1, config, onDecoded, onArranqueOk, err);
+      }, 350);
+    });
+  }
+
+  // Aplica filtros CSS al video para mejorar lectura en webcams de baja calidad
+  function aplicarFiltrosCamara() {
+    const b  = document.getElementById('ctrl_brightness')?.value  || 1.4;
+    const c  = document.getElementById('ctrl_contrast')?.value    || 2;
+    const s  = document.getElementById('ctrl_sharpen')?.value     || 1;
+    const gr = document.getElementById('ctrl_grayscale')?.value   || 0;
+    const video = document.querySelector('#interactiveScanner video');
+    if (video) {
+      const sharpenContrast = parseFloat(c) + parseFloat(s) * 0.3;
+      video.style.filter = `brightness(${b}) contrast(${sharpenContrast}) grayscale(${gr})`;
+      video.style.imageRendering = 'crisp-edges';
+    }
+  }
+
+  function resetearFiltros() {
+    document.getElementById('ctrl_brightness').value = '1.4';
+    document.getElementById('ctrl_contrast').value   = '2';
+    document.getElementById('ctrl_sharpen').value    = '1';
+    document.getElementById('ctrl_grayscale').value  = '0';
+    aplicarFiltrosCamara();
+  }
+
+  // Captura el frame actual como imagen estática y lo analiza — RESPALDO
+  // MANUAL únicamente para webcams que no enfocan bien en movimiento.
+  // El modo automático (continuo) sigue funcionando solo, sin necesitar
+  // este botón.
+  async function capturarFotoYLeer() {
+    const video = document.querySelector('#interactiveScanner video');
+    if (!video) return showToast('Cámara no activa.', 'warning');
+
+    const btn = document.getElementById('btnFotoCaptura');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
+    bgScanOcupado = true; // pausar el loop de fondo mientras se usa el mismo canvas
+
+    const canvas = document.getElementById('scanCanvas');
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+
+    const b  = document.getElementById('ctrl_brightness')?.value  || 1.4;
+    const c  = document.getElementById('ctrl_contrast')?.value    || 2;
+    const gr = document.getElementById('ctrl_grayscale')?.value   || 0;
+    ctx.filter = `brightness(${b}) contrast(${c}) grayscale(${Math.max(gr, 0.5)})`;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], 'capture.png', { type: 'image/png' });
+        const scanner = new Html5Qrcode('scanCanvas', false);
+        try {
+          const result = await scanner.scanFile(file, false);
+          scanner.clear();
+          registrarCodigoContinuo(result);
+        } catch(err) {
+          scanner.clear();
+          showToast('No se detectó código en la foto. Ajusta brillo/contraste e intenta de nuevo.', 'warning');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-camera-retro"></i> Capturar foto';
+          bgScanOcupado = false;
+        }
+      }, 'image/png');
+    } catch(e) {
+      showToast('Error al capturar imagen.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-camera-retro"></i> Capturar foto';
+      bgScanOcupado = false;
+    }
+  }
+
+  // Enciende/apaga la linterna del dispositivo (si la cámara activa la
+  // soporta). Ayuda a que la lectura automática funcione en ambientes con
+  // poca luz sin recurrir a "Capturar foto".
+  function alternarLinterna() {
+    try {
+      const video = document.querySelector('#interactiveScanner video');
+      const track = video && video.srcObject && video.srcObject.getVideoTracks()[0];
+      if (!track || !track.applyConstraints) return;
+      torchActivo = !torchActivo;
+      track.applyConstraints({ advanced: [{ torch: torchActivo }] }).then(() => {
+        const btn = document.getElementById('btnLinterna');
+        btn.classList.toggle('primary-btn', torchActivo);
+        btn.classList.toggle('secondary-btn', !torchActivo);
+      }).catch(() => {
+        torchActivo = !torchActivo;
+        showToast('No se pudo controlar la linterna en este dispositivo.', 'warning');
+      });
+    } catch(e) {}
+  }
+
+  function detenerCamaraEscaneo() {
+    document.getElementById('scannerModal').classList.add('hidden');
+    safeStopScanner();
+    html5QrScanner = null;
+    torchActivo = false;
+    detenerEscaneoMejoradoBackground();
+    ocultarEstadoCamara();
+  }
+
+
+  // ── INIT ──
+  document.addEventListener('DOMContentLoaded', () => {
+    cargarPendientesLocal();
+    renderTablaPendientes();
+    cargarCategorias();
+  });
+</script>
+</body>
+</html>

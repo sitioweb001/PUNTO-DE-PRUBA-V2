@@ -1,0 +1,81 @@
+AL porner los nuemro de whasap debe tener como prefijo +503 un seleccionador pero prefijo es 503 y 
+no sera necesario poner guion cuando llegue 0000 se pondra - para los otros 4 digitos
+
+es decir quedaria 
+
+el prefijo - el numero escrito 
+
+    +503 | 0000-0000
+               |-el guion se pone solo 
+
+
+
+
+ademas verifica que en  Importar / Exportar Datos
+ Importar
+Sube un archivo .csv o .json con columnas nombre, codigo, categoria, precio_compra, precio_venta, stock para registrar productos en lote.
+
+No se eligió ningún archivo 
+Ejecutar
+
+yo cuando subo el json Exportar
+Elige qué información quieres exportar. Puedes marcar todo o solo lo que necesites.
+
+Selecciono todo
+
+Inventario
+
+Ventas
+
+Categorías
+
+Papelera
+
+Excel
+
+PDF
+
+CSV
+
+JSON
+
+
+
+pero cuando subo el archivo como copia de segurdad 
+se sube el inventario mas no las categorias,ventas y la papelera
+
+
+ademas al subir  Importar
+Sube un archivo .csv o .json con columnas nombre, codigo, categoria, precio_compra, precio_venta, stock para registrar productos en lote.
+
+No se eligió ningún archivo 
+Ejecutar
+
+debe tener para arrastrar y soltar 
+
+"al igual que ministerio de hacienda"
+
+
+
+el punto es que al  Importar
+Sube un archivo .csv o .json con columnas nombre, codigo, categoria, precio_compra, precio_venta, stock para registrar productos en lote.
+
+No se eligió ningún archivo 
+Ejecutar subir el archivo
+le debe salir un registro el cual le diga el nombre del archivo que se subio como copia de seguridad 
+
+ademas en  Responsables de Reportes
+
+Agregar Responsable
+Agrega correos electrónicos que recibirán reportes automáticamente por email: resumen mensual (día 1 de cada mes), resumen anual (1 de enero), aviso inmediato de ventas grandes (cuando una venta supera el monto que definas) y alerta diaria de stock bajo. Haz clic sobre un responsable para editarlo, eliminarlo o enviarle un reporte de prueba ahora mismo.
+
+
+agrega la funcion 
+
+Reportes que recibirá:
+📊 Resumen mensual (día 1 de cada mes)
+📅 Resumen anual (1 de enero)
+💰 Aviso inmediato de ventas grandes
+⚠️ Alerta diaria de stock bajo
+📅📊 Copia de seguridad json
+📅📊 Copia de seguridad csv
