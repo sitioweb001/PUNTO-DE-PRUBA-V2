@@ -1,0 +1,939 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#091933">
+  <title>Control de Entrada de Inventario — ERP POS LITE</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #055de2; --primary-dark: #091933; --primary-light: #e8f2fc;
+      --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ffc107;
+      --bg-body: #f4f6f9; --bg-card: #ffffff; --bg-sidebar: #091933;
+      --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body.dark-mode {
+      --bg-body: #0f172a; --bg-card: #1e293b; --bg-sidebar: #020817;
+      --text-main: #e2e8f0; --text-muted: #94a3b8; --border-color: #334155;
+      --primary-light: #1e3a5f;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body { height:100%; }
+    body { font-family:'Inter', -apple-system, sans-serif; background:var(--bg-body); color:var(--text-main); transition:background .3s, color .3s; }
+
+    .topbar { background:var(--bg-sidebar); color:#fff; padding:1rem 1.5rem; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+    .topbar h1 { font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:10px; }
+    .topbar a.volver { color:rgba(255,255,255,0.75); text-decoration:none; font-size:0.85rem; display:flex; align-items:center; gap:6px; }
+    .topbar a.volver:hover { color:#fff; }
+
+    .wrap { max-width:760px; margin:0 auto; padding:1.5rem; }
+    .card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.5rem; margin-bottom:1.5rem; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .text-muted { color:var(--text-muted); }
+
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; margin-top:1rem; }
+    .form-group label { display:block; margin-bottom:6px; font-weight:600; font-size:.85rem; }
+    .form-group input, .form-group select { width:100%; padding:10px 12px; border:1px solid var(--border-color); border-radius:var(--radius); background:var(--bg-card); color:var(--text-main); font-size:.9rem; }
+    .form-group input:focus, .form-group select:focus { outline:none; border-color:var(--primary-color); }
+    .form-group input:disabled { opacity:.55; cursor:not-allowed; }
+    .full-width { grid-column:1 / -1; }
+
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; border:none; border-radius:var(--radius); font-weight:600; cursor:pointer; transition:background .2s; font-size:.9rem; }
+    .primary-btn { background:var(--primary-color); color:#fff; }
+    .primary-btn:hover { background:#044bc5; }
+    .secondary-btn { background:var(--bg-card); color:var(--text-main); border:1px solid var(--border-color); }
+    .secondary-btn:hover { background:var(--primary-light); }
+    .danger-btn { background:var(--danger-color); color:#fff; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:2000; padding:1rem; }
+    .modal-content { background:var(--bg-card); border-radius:var(--radius-lg); width:100%; max-width:420px; padding:1.25rem; text-align:center; max-height:90vh; overflow-y:auto; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; font-weight:bold; }
+    .modal-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--text-muted); }
+    .hidden { display:none !important; }
+
+    .toast-container { position:fixed; top:1.25rem; right:1.25rem; z-index:9999; display:flex; flex-direction:column; gap:.75rem; max-width:340px; width:calc(100% - 2.5rem); }
+    .toast { background:var(--primary-dark); color:#fff; padding:14px 18px; border-radius:var(--radius-lg); font-weight:600; box-shadow:0 10px 15px -3px rgba(0,0,0,.2); display:flex; align-items:center; gap:10px; opacity:0; transform:translateY(-16px); transition:all .3s cubic-bezier(.34,1.56,.64,1); font-size:.88rem; }
+    .toast.show { opacity:1; transform:translateY(0); }
+    .toast-success { border-left:5px solid var(--success-color); background:#0c192e; }
+    .toast-error { border-left:5px solid var(--danger-color); background:#220e10; }
+    .toast-warning { border-left:5px solid var(--warning-color); background:#241d07; }
+
+    .spinner-overlay { position:fixed; inset:0; background:rgba(9,25,51,.6); z-index:5000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; }
+    .spinner-ring { width:48px; height:48px; border:4px solid rgba(255,255,255,.2); border-top-color:#fff; border-radius:50%; animation:spin .75s linear infinite; }
+    .spinner-label { color:#fff; font-size:.85rem; font-weight:600; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Botón de micrófono (mismo comportamiento visual que en index.html):
+       se pone rojo y "late" mientras el navegador está escuchando. */
+    @keyframes micEscuchandoPulso {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.45); }
+      50%      { box-shadow: 0 0 0 14px rgba(220,53,69,0); }
+    }
+    .mic-btn.mic-escuchando {
+      background: var(--danger-color) !important;
+      color: #fff !important;
+      border-color: var(--danger-color) !important;
+      animation: micEscuchandoPulso 1.1s ease-out infinite;
+    }
+
+    .paso-badge { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:var(--primary-color); color:#fff; font-size:.8rem; font-weight:700; margin-right:8px; }
+    .paso-badge.hecho { background:var(--success-color); }
+
+    @media (max-width:640px) {
+      .form-grid { grid-template-columns:1fr; }
+      .modal-content { max-width:100% !important; margin:0 .5rem; padding:1rem; }
+      #interactiveScanner { height: min(38vh, 260px) !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <h1><i class="fas fa-dolly"></i> Control de Entrada de Inventario</h1>
+    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <button class="btn secondary-btn" style="padding:6px 12px;" onclick="document.body.classList.toggle('dark-mode')"><i class="fas fa-moon"></i> Modo Oscuro</button>
+      <a class="volver" href="registro-masivo.html" target="_blank" rel="noopener"><i class="fas fa-box-open"></i> Registro Masivo</a>
+      <a class="volver" href="index.html"><i class="fas fa-arrow-left"></i> Volver al sistema</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <p class="text-muted" style="font-size:.85rem; margin-bottom:1.25rem;">
+      Herramienta rápida para recibir mercadería: identifica el producto (escáner, búsqueda o voz), confirma que es el correcto, y suma la cantidad al inventario. Si el código no existe todavía, te manda directo a <b>Registro Masivo</b> para darlo de alta.
+    </p>
+
+    <!-- ═══ PASO 1 — Identificar producto ═══ -->
+    <div class="card" id="paso1Card">
+      <h2><span class="paso-badge" id="badge1">1</span>Identificar producto</h2>
+      <p class="text-muted" style="font-size:.85rem; margin-top:4px;">Escanea el código de barras, escríbelo, o busca por nombre a mano o por voz.</p>
+
+      <div class="form-group full-width" style="margin-top:1rem;">
+        <label>Código de barras o nombre del producto:</label>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="ei_query" placeholder="Escribe, escanea o dicta..." autocomplete="off">
+          <button type="button" class="btn secondary-btn mic-btn" id="btnBusquedaVozEntrada" onclick="toggleBusquedaVozEntrada()" title="Buscar por voz (di &quot;código ...&quot; o &quot;nombre ...&quot;)" style="min-width:44px; padding:0;"><i class="fas fa-microphone"></i></button>
+          <button type="button" class="btn secondary-btn" onclick="activarCamaraEscaneo()" style="min-width:44px; padding:0;"><i class="fas fa-camera"></i></button>
+          <button type="button" class="btn primary-btn" onclick="buscarProductoEntrada()" style="white-space:nowrap;"><i class="fas fa-search"></i> Buscar</button>
+        </div>
+        <div id="ei_sugerencias" class="hidden" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius); max-height:220px; overflow-y:auto; margin-top:6px;"></div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin:6px 0 0;"><i class="fas fa-barcode"></i> Tu lector USB funciona en cualquier momento: escanea y presiona Enter.</p>
+      </div>
+    </div>
+
+    <!-- ═══ Producto no encontrado → link a Registro Masivo ═══ -->
+    <div class="card hidden" id="noEncontradoCard" style="border:1px dashed var(--warning-color);">
+      <h3 style="color:#a16b00;"><i class="fas fa-triangle-exclamation"></i> Ese código no está registrado</h3>
+      <p class="text-muted" style="font-size:.85rem; margin:6px 0 1rem;">
+        El código <b id="ne_codigo" style="font-family:monospace;"></b> no coincide con ningún producto activo del inventario. Es un producto nuevo: puedes darlo de alta directamente en <b>Registro Masivo</b> (se le pasa el código ya escaneado, para no tener que repetirlo).
+      </p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn primary-btn" onclick="irARegistroMasivoConCodigo()"><i class="fas fa-box-open"></i> Registrar como producto nuevo</button>
+        <button class="btn secondary-btn" onclick="reiniciarBusquedaEntrada()"><i class="fas fa-rotate-left"></i> Buscar otro código</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 2 — Verificar producto ═══ -->
+    <div class="card hidden" id="paso2Card">
+      <h2><span class="paso-badge" id="badge2">2</span>Verificar producto</h2>
+      <div style="background:var(--bg-body); border:1px solid var(--border-color); border-radius:var(--radius); padding:.8rem 1rem; margin:1rem 0; font-size:.88rem; display:grid; gap:6px;">
+        <div>📦 Código: <b id="v2_codigo" style="font-family:monospace;">—</b></div>
+        <div>🏷️ Nombre en el sistema: <b id="v2_nombre_real">—</b></div>
+        <div>📊 Existencia actual: <b id="v2_stock">0</b> &nbsp;·&nbsp; Precio compra: <b id="v2_precio_compra">$0.00</b> &nbsp;·&nbsp; Precio venta: <b id="v2_precio_venta">$0.00</b></div>
+      </div>
+      <div class="form-group">
+        <label>Escribe el nombre del producto para confirmar que es el correcto:</label>
+        <input type="text" id="v2_nombre_confirmar" autocomplete="off" placeholder="Escribe el nombre tal como lo ves arriba..." oninput="verificarNombreEntrada()">
+        <p id="v2_feedback" style="font-size:.8rem; margin-top:6px; font-weight:600; min-height:1.1em;"></p>
+      </div>
+      <button class="btn secondary-btn" onclick="reiniciarBusquedaEntrada()"><i class="fas fa-rotate-left"></i> No es este producto, buscar otro</button>
+    </div>
+
+    <!-- ═══ PASO 3 — Sumar al inventario ═══ -->
+    <div class="card hidden" id="paso3Card">
+      <h2><span class="paso-badge hecho" id="badge3">3</span>Sumar al inventario</h2>
+      <form id="entradaForm" class="form-grid">
+        <div class="form-group"><label>Cantidad a sumar:</label><input type="number" id="ei_cantidad" required min="1" oninput="actualizarNuevaExistenciaEntrada()"></div>
+        <div class="form-group"><label>Costo unitario ($):</label><input type="number" id="ei_precio_compra" required min="0" step="0.01"></div>
+        <div class="form-group"><label>Precio de venta ($) <span class="text-muted" style="font-weight:400; font-size:.78rem;">(opcional, para actualizarlo)</span>:</label><input type="number" id="ei_precio_venta" min="0" step="0.01"></div>
+        <div class="form-group"><label>Nueva existencia:</label><input type="text" id="ei_nueva_existencia" readonly style="font-weight:700; color:var(--success-color);"></div>
+        <div class="form-group full-width"><label>Encargado <span class="text-muted" style="font-weight:400; font-size:.78rem;">(opcional)</span>:</label><input type="text" id="ei_encargado" placeholder="Tu nombre..."></div>
+        <div class="full-width"><button type="submit" class="btn primary-btn"><i class="fas fa-cloud-upload-alt"></i> Registrar Entrada</button></div>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Modal escáner (mismo motor que Registro Masivo / index.html) -->
+  <div id="scannerModal" class="modal hidden">
+    <div class="modal-content" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 style="margin:0;"><i class="fas fa-camera"></i> Escanear Código</h3>
+        <button class="modal-close" onclick="detenerCamaraEscaneo()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:8px;">
+        <div class="form-group" id="cameraSelectGroup" style="display:none; text-align:left; margin:0; flex:1;">
+          <label style="font-size:.8rem;">Seleccionar Cámara:</label>
+          <select id="cameraSelect" onchange="cambiarCamaraEscaneo()"></select>
+        </div>
+        <button id="btnLinterna" onclick="alternarLinterna()" class="btn secondary-btn" style="display:none; height:38px; padding:0 12px;" title="Encender/apagar linterna (ayuda a la lectura automática con poca luz)">
+          <i class="fas fa-bolt"></i>
+        </button>
+      </div>
+
+      <div id="scannerStatusMsg" style="display:none; font-size:.8rem; padding:8px 10px; border-radius:6px; margin-bottom:8px; text-align:left;"></div>
+
+      <div id="scannerControls" style="display:none; margin-bottom:8px; background:rgba(0,0,0,0.06); border-radius:8px; padding:8px 10px; text-align:left;">
+        <div style="font-size:.72rem; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">🔧 Mejoras de imagen</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Brillo</label>
+            <input type="range" id="ctrl_brightness" min="0.5" max="3" step="0.1" value="1.4"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Contraste</label>
+            <input type="range" id="ctrl_contrast" min="0.5" max="4" step="0.1" value="2"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Nitidez</label>
+            <input type="range" id="ctrl_sharpen" min="0" max="5" step="0.5" value="1"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+          <div>
+            <label style="font-size:.72rem; color:var(--text-muted);">Escala de grises</label>
+            <input type="range" id="ctrl_grayscale" min="0" max="1" step="0.1" value="0"
+              oninput="aplicarFiltrosCamara()" style="width:100%; height:4px; cursor:pointer;">
+          </div>
+        </div>
+        <button onclick="resetearFiltros()" style="margin-top:6px; font-size:.72rem; background:none; border:none; color:var(--primary-color); cursor:pointer; padding:0; font-weight:600;">↺ Restablecer</button>
+      </div>
+
+      <div id="interactiveScanner" style="width:100%; height:min(46vh, 300px); background:#000; border-radius:8px; overflow:hidden; margin:0 auto .5rem; display:flex; align-items:center; justify-content:center;"></div>
+
+      <div style="display:flex; gap:8px; margin-bottom:.5rem;">
+        <button class="btn danger-btn" onclick="detenerCamaraEscaneo()" style="flex:1; height:42px;"><i class="fas fa-power-off"></i> Cerrar</button>
+        <button class="btn secondary-btn" onclick="capturarFotoYLeer()" id="btnFotoCaptura" style="flex:1; height:42px;" title="Congela el frame actual y lo analiza con más tiempo (respaldo manual)">
+          <i class="fas fa-camera-retro"></i> Capturar foto
+        </button>
+      </div>
+      <canvas id="scanCanvas" style="display:none;"></canvas>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+<script>
+  // ¡Debe ser el mismo SCRIPT_URL que usa index.html / registro-masivo.html!
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbYNUf0--D2RVqFyaBZHFxQuClX6RBybuhK6kJU9Q02NZyICUIXEnUWIR1x25xMnfMrA/exec";
+
+  let inventarioGlobal = [];        // productos activos completos (nombre, código, stock, precios...)
+  let configIgnorarCerosCodigo = false;
+  let html5QrScanner = null;
+  let availableCameras = [];
+  let selectedCameraId = null;
+  let torchActivo = false;
+
+  // Estado del flujo de 3 pasos
+  let productoActualEntrada = null; // objeto del producto ya identificado (paso 2/3)
+  let codigoActualEntrada = '';     // texto que se buscó (para mandarlo a Registro Masivo si no existe)
+
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  let audioCtx;
+  function playBeep() {
+    try {
+      if (!audioCtx) audioCtx = new AudioContext();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = 'square'; o.frequency.value = 1000;
+      g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.1);
+    } catch(e) {}
+  }
+
+  function showToast(msg, type='success') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-exclamation-triangle'}"></i> <span>${msg}</span>`;
+    c.appendChild(t);
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+  }
+
+  function showSpinner(msg='Cargando...') {
+    let el = document.getElementById('spinnerOverlay');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'spinnerOverlay'; el.className = 'spinner-overlay';
+      el.innerHTML = `<div class="spinner-ring"></div><div class="spinner-label" id="spinnerLabel">${msg}</div>`;
+      document.body.appendChild(el);
+    } else { document.getElementById('spinnerLabel').textContent = msg; el.style.display = 'flex'; }
+  }
+  function hideSpinner() { const el = document.getElementById('spinnerOverlay'); if (el) el.style.display = 'none'; }
+
+  // ── INVENTARIO + config (para poder comparar códigos igual que el resto del sistema) ──
+  async function cargarInventarioEntrada() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getInventario`).then(r => r.json());
+      if (res.status === 'success') inventarioGlobal = res.data || [];
+    } catch(e) { inventarioGlobal = []; showToast('No se pudo conectar con el servidor.', 'error'); }
+  }
+
+  async function cargarConfigCodigoBarras() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getConfigCodigoBarras`).then(r => r.json());
+      configIgnorarCerosCodigo = res.status === 'success' ? !!res.activo : false;
+    } catch(e) { configIgnorarCerosCodigo = false; }
+  }
+
+  // Misma normalización que usa el resto del sistema (index.html / Code.gs)
+  // para comparar códigos, respetando el interruptor de "ignorar ceros a
+  // la izquierda" de Ajustes.
+  function normalizarCodigoLocal(codigo) {
+    const c = String(codigo == null ? '' : codigo).trim().toLowerCase();
+    if (!configIgnorarCerosCodigo) return c;
+    return c.replace(/^0+(?=.)/, '');
+  }
+  function codigosCoinciden(codigoGuardado, valorBuscado) {
+    return normalizarCodigoLocal(codigoGuardado) === normalizarCodigoLocal(valorBuscado);
+  }
+
+  // Quita acentos y normaliza espacios/mayúsculas — se usa tanto para la
+  // voz como para comparar el nombre escrito en el Paso 2.
+  function normalizarTexto(str) {
+    return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // ── PASO 1: BUSCAR PRODUCTO (código, nombre, escáner o voz) ──
+  // ══════════════════════════════════════════════════════════════
+
+  document.getElementById('ei_query').addEventListener('input', e => {
+    const val = e.target.value.trim();
+    const sug = document.getElementById('ei_sugerencias');
+    if (!val) { sug.classList.add('hidden'); sug.innerHTML = ''; return; }
+    const match = inventarioGlobal.filter(p =>
+      (p.nombre || '').toLowerCase().includes(val.toLowerCase()) ||
+      codigosCoinciden(p['código'] ?? p.codigo, val)
+    );
+    if (match.length) {
+      sug.innerHTML = match.map(p => `<div style="padding:10px; cursor:pointer; border-bottom:1px solid var(--border-color);" onclick='seleccionarProductoEntrada("${p.id}")'>
+          <b>${p.nombre}</b> <span style="color:var(--text-muted); font-size:.8rem;">· ${p['código'] ?? p.codigo ?? 'sin código'}</span>
+        </div>`).join('');
+      sug.classList.remove('hidden');
+    } else {
+      sug.classList.add('hidden');
+      sug.innerHTML = '';
+    }
+  });
+
+  // El lector USB "escribe" el código y termina enviando Enter — igual
+  // que en Ventas/Compras, así que Enter dispara la búsqueda directo.
+  document.getElementById('ei_query').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); buscarProductoEntrada(); }
+  });
+
+  function seleccionarProductoEntrada(id) {
+    const item = inventarioGlobal.find(p => String(p.id) === String(id));
+    if (!item) return;
+    document.getElementById('ei_sugerencias').classList.add('hidden');
+    document.getElementById('ei_query').value = '';
+    mostrarPaso2(item, item['código'] ?? item.codigo ?? '');
+  }
+
+  function buscarProductoEntrada() {
+    const val = document.getElementById('ei_query').value.trim();
+    if (!val) { showToast('Escribe, escanea o dicta un código o nombre primero.', 'warning'); return; }
+    document.getElementById('ei_sugerencias').classList.add('hidden');
+
+    // 1) ¿Coincide con un código exacto? (igual que el lector USB)
+    const porCodigo = inventarioGlobal.find(p => codigosCoinciden(p['código'] ?? p.codigo, val));
+    if (porCodigo) { mostrarPaso2(porCodigo, val); return; }
+
+    // 2) ¿Coincide por nombre? Si hay una sola coincidencia clara, se
+    //    pasa directo; si hay varias, se dejan las sugerencias visibles
+    //    (ya las llenó el listener de "input") para que el usuario elija.
+    const porNombre = inventarioGlobal.filter(p => (p.nombre || '').toLowerCase().includes(val.toLowerCase()));
+    if (porNombre.length === 1) { mostrarPaso2(porNombre[0], val); return; }
+    if (porNombre.length > 1) {
+      showToast(`Hay ${porNombre.length} productos que coinciden con "${val}". Elige uno de la lista.`, 'warning');
+      document.getElementById('ei_query').dispatchEvent(new Event('input'));
+      return;
+    }
+
+    // 3) Nada coincide: probablemente es un producto nuevo.
+    mostrarNoEncontrado(val);
+  }
+
+  function mostrarPaso2(producto, codigoBuscado) {
+    productoActualEntrada = producto;
+    codigoActualEntrada = String(codigoBuscado || producto['código'] || producto.codigo || '').trim();
+
+    document.getElementById('noEncontradoCard').classList.add('hidden');
+    document.getElementById('paso3Card').classList.add('hidden');
+
+    document.getElementById('v2_codigo').textContent = producto['código'] || producto.codigo || '—';
+    document.getElementById('v2_nombre_real').textContent = producto.nombre;
+    document.getElementById('v2_stock').textContent = parseInt(producto.stock) || 0;
+    document.getElementById('v2_precio_compra').textContent = '$' + parseFloat(producto.precio_compra || 0).toFixed(2);
+    document.getElementById('v2_precio_venta').textContent = '$' + parseFloat(producto.precio_venta || 0).toFixed(2);
+
+    const confirmar = document.getElementById('v2_nombre_confirmar');
+    confirmar.value = '';
+    document.getElementById('v2_feedback').textContent = '';
+    document.getElementById('paso2Card').classList.remove('hidden');
+    setTimeout(() => confirmar.focus(), 100);
+  }
+
+  function mostrarNoEncontrado(codigoBuscado) {
+    productoActualEntrada = null;
+    codigoActualEntrada = String(codigoBuscado || '').trim();
+    document.getElementById('paso2Card').classList.add('hidden');
+    document.getElementById('paso3Card').classList.add('hidden');
+    document.getElementById('ne_codigo').textContent = codigoActualEntrada;
+    document.getElementById('noEncontradoCard').classList.remove('hidden');
+  }
+
+  function reiniciarBusquedaEntrada() {
+    productoActualEntrada = null;
+    codigoActualEntrada = '';
+    document.getElementById('paso2Card').classList.add('hidden');
+    document.getElementById('paso3Card').classList.add('hidden');
+    document.getElementById('noEncontradoCard').classList.add('hidden');
+    const q = document.getElementById('ei_query');
+    q.value = '';
+    document.getElementById('ei_sugerencias').classList.add('hidden');
+    q.focus();
+  }
+
+  function irARegistroMasivoConCodigo() {
+    const url = `registro-masivo.html?codigo=${encodeURIComponent(codigoActualEntrada)}`;
+    window.open(url, '_blank', 'noopener');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // ── PASO 2: VERIFICAR NOMBRE ──
+  // Comparación tolerante: coincide si son iguales ignorando acentos/
+  // mayúsculas, o si lo escrito es un fragmento reconocible (3+
+  // caracteres) del nombre real. No es una contraseña, es una doble
+  // revisión para evitar sumarle stock al producto equivocado por un
+  // código mal leído.
+  // ══════════════════════════════════════════════════════════════
+  function verificarNombreEntrada() {
+    const feedback = document.getElementById('v2_feedback');
+    const escrito = normalizarTexto(document.getElementById('v2_nombre_confirmar').value);
+    if (!productoActualEntrada) return;
+    const real = normalizarTexto(productoActualEntrada.nombre);
+
+    if (!escrito) {
+      feedback.textContent = '';
+      document.getElementById('paso3Card').classList.add('hidden');
+      return;
+    }
+
+    const coincide = escrito === real || (escrito.length >= 3 && real.includes(escrito));
+    if (coincide) {
+      feedback.innerHTML = '<span style="color:var(--success-color);"><i class="fas fa-circle-check"></i> Coincide con el producto registrado.</span>';
+      mostrarPaso3();
+    } else {
+      feedback.innerHTML = '<span style="color:var(--danger-color);"><i class="fas fa-circle-xmark"></i> No coincide con el nombre registrado. Revisa antes de continuar.</span>';
+      document.getElementById('paso3Card').classList.add('hidden');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // ── PASO 3: SUMAR AL INVENTARIO ──
+  // ══════════════════════════════════════════════════════════════
+  function mostrarPaso3() {
+    if (!productoActualEntrada) return;
+    document.getElementById('ei_cantidad').value = '';
+    document.getElementById('ei_precio_compra').value = productoActualEntrada.precio_compra || '';
+    document.getElementById('ei_precio_venta').value = productoActualEntrada.precio_venta || '';
+    actualizarNuevaExistenciaEntrada();
+    document.getElementById('paso3Card').classList.remove('hidden');
+  }
+
+  function actualizarNuevaExistenciaEntrada() {
+    const stockActual = productoActualEntrada ? (parseInt(productoActualEntrada.stock) || 0) : 0;
+    const cantidad = parseInt(document.getElementById('ei_cantidad').value) || 0;
+    document.getElementById('ei_nueva_existencia').value = stockActual + cantidad;
+  }
+
+  document.getElementById('entradaForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!productoActualEntrada) { showToast('Primero identifica y verifica un producto.', 'warning'); return; }
+    const payload = {
+      action: 'registrarCompra',
+      producto_id: productoActualEntrada.id,
+      cantidad: document.getElementById('ei_cantidad').value,
+      precio_compra: document.getElementById('ei_precio_compra').value,
+      precio_venta: document.getElementById('ei_precio_venta').value,
+      usuario: document.getElementById('ei_encargado').value.trim() || 'Control de Entrada'
+    };
+    showSpinner('Registrando entrada...');
+    try {
+      const res = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify(payload) }).then(r => r.json());
+      hideSpinner();
+      if (res.status === 'success') {
+        showToast(res.message || 'Entrada registrada con éxito.', 'success');
+        await cargarInventarioEntrada();
+        reiniciarBusquedaEntrada();
+      } else {
+        showToast(res.message || 'Error al registrar la entrada.', 'error');
+      }
+    } catch(err) { hideSpinner(); showToast('Error de conexión con el servidor.', 'error'); }
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  // ── BÚSQUEDA POR VOZ (mismo patrón que Ventas en index.html) ──
+  // Di "código ..." o "nombre ..." y se reutiliza exactamente el mismo
+  // flujo de búsqueda que el campo manual / el lector USB.
+  // ══════════════════════════════════════════════════════════════
+  let vozReconocimiento = null;
+  let vozEscuchando = false;
+
+  function obtenerReconocimientoVoz() {
+    if (vozReconocimiento) return vozReconocimiento;
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return null;
+
+    vozReconocimiento = new SpeechRecognitionAPI();
+    vozReconocimiento.lang = 'es-419';
+    vozReconocimiento.continuous = false;
+    vozReconocimiento.interimResults = false;
+    vozReconocimiento.maxAlternatives = 1;
+
+    vozReconocimiento.onstart = () => marcarEstadoMicVoz(true);
+    vozReconocimiento.onend = () => marcarEstadoMicVoz(false);
+    vozReconocimiento.onerror = (ev) => {
+      marcarEstadoMicVoz(false);
+      if (ev.error === 'no-speech') showToast('No se detectó ninguna voz. Intenta de nuevo.', 'warning');
+      else if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') showToast('Permiso de micrófono denegado. Actívalo en la configuración del navegador e intenta de nuevo.', 'error');
+      else if (ev.error === 'aborted') { /* cancelado a mano, sin aviso */ }
+      else showToast('Error del reconocimiento de voz: ' + ev.error, 'error');
+    };
+    vozReconocimiento.onresult = (ev) => procesarComandoVozEntrada(ev.results[0][0].transcript);
+    return vozReconocimiento;
+  }
+
+  function marcarEstadoMicVoz(activo) {
+    vozEscuchando = activo;
+    const btn = document.getElementById('btnBusquedaVozEntrada');
+    if (!btn) return;
+    btn.classList.toggle('mic-escuchando', activo);
+  }
+
+  function toggleBusquedaVozEntrada() {
+    const r = obtenerReconocimientoVoz();
+    if (!r) { showToast('Este navegador no soporta búsqueda por voz. Usa Chrome (computadora o Android).', 'error'); return; }
+    if (vozEscuchando) { r.stop(); return; }
+    try { r.start(); } catch(e) { /* ya estaba iniciado */ }
+  }
+
+  function quitarAcentosVoz(str) { return str.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+  const VOZ_UNIDADES = { cero:'0', uno:'1', un:'1', una:'1', dos:'2', tres:'3', cuatro:'4', cinco:'5', seis:'6', siete:'7', ocho:'8', nueve:'9' };
+  const VOZ_DIEZ_A_VEINTINUEVE = {
+    diez:'10', once:'11', doce:'12', trece:'13', catorce:'14', quince:'15',
+    dieciseis:'16', diecisiete:'17', dieciocho:'18', diecinueve:'19',
+    veinte:'20', veintiuno:'21', veintidos:'22', veintitres:'23', veinticuatro:'24',
+    veinticinco:'25', veintiseis:'26', veintisiete:'27', veintiocho:'28', veintinueve:'29'
+  };
+  const VOZ_DECENAS = { treinta:'30', cuarenta:'40', cincuenta:'50', sesenta:'60', setenta:'70', ochenta:'80', noventa:'90' };
+  const VOZ_CIENTOS = { cien:'100', ciento:'100', doscientos:'200', trescientos:'300', cuatrocientos:'400', quinientos:'500', seiscientos:'600', setecientos:'700', ochocientos:'800', novecientos:'900' };
+
+  function palabrasANumerosVoz(frase) {
+    const tokens = quitarAcentosVoz(frase).split(/\s+/).filter(Boolean);
+    const partesNumero = [];
+    let i = 0;
+    while (i < tokens.length) {
+      const tok = tokens[i];
+      if (/^\d+$/.test(tok)) { partesNumero.push(tok); i++; continue; }
+      if (VOZ_DECENAS[tok] && tokens[i + 1] === 'y' && VOZ_UNIDADES[tokens[i + 2]]) {
+        partesNumero.push(String(parseInt(VOZ_DECENAS[tok], 10) + parseInt(VOZ_UNIDADES[tokens[i + 2]], 10)));
+        i += 3; continue;
+      }
+      if (VOZ_CIENTOS[tok]) { partesNumero.push(VOZ_CIENTOS[tok]); i++; continue; }
+      if (VOZ_DECENAS[tok]) { partesNumero.push(VOZ_DECENAS[tok]); i++; continue; }
+      if (VOZ_DIEZ_A_VEINTINUEVE[tok]) { partesNumero.push(VOZ_DIEZ_A_VEINTINUEVE[tok]); i++; continue; }
+      if (VOZ_UNIDADES[tok]) { partesNumero.push(VOZ_UNIDADES[tok]); i++; continue; }
+      i++;
+    }
+    return partesNumero.join('');
+  }
+
+  function procesarComandoVozEntrada(transcript) {
+    const texto = transcript.toLowerCase().trim().replace(/[.,;!?]/g, '');
+    if (!texto) { showToast('No se entendió nada. Intenta de nuevo.', 'warning'); return; }
+    const partes = texto.split(/\s+/);
+    const comando = quitarAcentosVoz(partes[0]);
+    const resto = partes.slice(1).join(' ').trim();
+
+    if (comando === 'codigo') {
+      if (!resto) { showToast('Di el código después de la palabra "código". Ej: "código siete ocho nueve".', 'warning'); return; }
+      const codigoDigitos = palabrasANumerosVoz(resto);
+      if (!codigoDigitos) { showToast(`No se reconoció ningún número en "${resto}".`, 'warning'); return; }
+      document.getElementById('ei_query').value = codigoDigitos;
+      playBeep();
+      buscarProductoEntrada();
+    } else if (comando === 'nombre') {
+      if (!resto) { showToast('Di el nombre después de la palabra "nombre". Ej: "nombre coca cola".', 'warning'); return; }
+      const campo = document.getElementById('ei_query');
+      campo.value = resto;
+      campo.dispatchEvent(new Event('input'));
+      playBeep();
+      showToast(`Comando de voz: buscando "${resto}".`, 'success');
+    } else {
+      showToast('Comando de voz no reconocido. Empieza diciendo "código" o "nombre".', 'error');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // ── ESCÁNER DE CÁMARA (idéntico motor que Registro Masivo / POS) ──
+  // Una lectura por vez: al detectar un código válido, se llena el
+  // campo, suena el bip, la cámara se cierra sola y se dispara la
+  // búsqueda automáticamente (código → Paso 2 o "no encontrado").
+  // ══════════════════════════════════════════════════════════════
+  let escaneoResuelto = false;
+  function registrarCodigoContinuo(decodedText) {
+    if (escaneoResuelto) return;
+    escaneoResuelto = true;
+
+    playBeep();
+    const input = document.getElementById('ei_query');
+    input.value = decodedText;
+    input.style.transition = 'background-color .15s';
+    input.style.backgroundColor = 'rgba(40,167,69,0.25)';
+    setTimeout(() => { input.style.backgroundColor = ''; }, 350);
+
+    detenerCamaraEscaneo();
+    showToast('Código capturado: ' + decodedText, 'success');
+    buscarProductoEntrada();
+  }
+
+  let bgScanInterval = null;
+  let bgScanOcupado = false;
+  const BG_SCAN_INTERVALO_MS = 550;
+
+  function iniciarEscaneoMejoradoBackground() {
+    detenerEscaneoMejoradoBackground();
+    bgScanOcupado = false;
+    bgScanInterval = setInterval(ejecutarEscaneoMejoradoBackground, BG_SCAN_INTERVALO_MS);
+  }
+  function detenerEscaneoMejoradoBackground() {
+    if (bgScanInterval) { clearInterval(bgScanInterval); bgScanInterval = null; }
+    bgScanOcupado = false;
+  }
+  function ejecutarEscaneoMejoradoBackground() {
+    if (bgScanOcupado || escaneoResuelto || !html5QrScanner) return;
+    const video = document.querySelector('#interactiveScanner video');
+    if (!video || video.readyState < 2 || !video.videoWidth) return;
+    bgScanOcupado = true;
+    try {
+      const canvas = document.getElementById('scanCanvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      const b  = document.getElementById('ctrl_brightness')?.value || 1.4;
+      const c  = document.getElementById('ctrl_contrast')?.value   || 2;
+      const s  = document.getElementById('ctrl_sharpen')?.value    || 1;
+      const gr = document.getElementById('ctrl_grayscale')?.value  || 0;
+      const sharpenContrast = parseFloat(c) + parseFloat(s) * 0.3;
+      ctx.filter = `brightness(${b}) contrast(${sharpenContrast}) grayscale(${Math.max(gr, 0.4)})`;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob || escaneoResuelto) { bgScanOcupado = false; return; }
+        const file = new File([blob], 'bg.png', { type: 'image/png' });
+        const tempScanner = new Html5Qrcode('scanCanvas', false);
+        tempScanner.scanFile(file, false).then((result) => {
+          try { tempScanner.clear(); } catch(e) {}
+          bgScanOcupado = false;
+          registrarCodigoContinuo(result);
+        }).catch(() => {
+          try { tempScanner.clear(); } catch(e) {}
+          bgScanOcupado = false;
+        });
+      }, 'image/png');
+    } catch(e) { bgScanOcupado = false; }
+  }
+
+  function activarCamaraEscaneo() {
+    const modal = document.getElementById('scannerModal');
+    const selectGroup = document.getElementById('cameraSelectGroup');
+    const select = document.getElementById('cameraSelect');
+    modal.classList.remove('hidden');
+    selectGroup.style.display = 'none';
+    select.innerHTML = '';
+    selectedCameraId = null;
+    escaneoResuelto = false;
+    ocultarEstadoCamara();
+    iniciarLectorCamara(null);
+  }
+
+  function mostrarEstadoCamara(texto, tipo) {
+    const el = document.getElementById('scannerStatusMsg');
+    if (!el) return;
+    el.textContent = texto;
+    el.style.display = 'block';
+    if (tipo === 'error') { el.style.background = 'rgba(220,53,69,0.1)'; el.style.color = 'var(--danger-color)'; }
+    else { el.style.background = 'rgba(5,93,226,0.07)'; el.style.color = 'var(--text-main)'; }
+  }
+  function ocultarEstadoCamara() {
+    const el = document.getElementById('scannerStatusMsg');
+    if (el) { el.style.display = 'none'; el.textContent = ''; }
+  }
+
+  function cargarListaCamarasParaSelector() {
+    const selectGroup = document.getElementById('cameraSelectGroup');
+    const select = document.getElementById('cameraSelect');
+    Html5Qrcode.getCameras().then(devices => {
+      if (!devices || !devices.length) return;
+      availableCameras = devices;
+      select.innerHTML = devices.map(d => `<option value="${d.id}">${d.label || 'Cámara ' + d.id}</option>`).join('');
+      selectGroup.style.display = 'block';
+      let activeId = null;
+      try {
+        const video = document.querySelector('#interactiveScanner video');
+        const track = video && video.srcObject && video.srcObject.getVideoTracks()[0];
+        activeId = track && track.getSettings && track.getSettings().deviceId;
+      } catch(e) {}
+      if (activeId && devices.some(d => d.id === activeId)) selectedCameraId = activeId;
+      else selectedCameraId = devices[0].id;
+      select.value = selectedCameraId;
+    }).catch(() => {});
+  }
+
+  function cambiarCamaraEscaneo() {
+    selectedCameraId = document.getElementById('cameraSelect').value;
+    safeStopScanner(() => { setTimeout(() => iniciarLectorCamara(selectedCameraId), 350); });
+  }
+
+  function safeStopScanner(callback) {
+    if (!html5QrScanner) { if (callback) callback(); return; }
+    const scanner = html5QrScanner;
+    const limpiarYContinuar = () => { try { scanner.clear(); } catch(e) {} if (callback) callback(); };
+    try {
+      let estado = null;
+      try { estado = scanner.getState ? scanner.getState() : null; } catch(e) {}
+      const corriendo = estado === null ||
+        (typeof Html5QrcodeScannerState !== 'undefined' &&
+          (estado === Html5QrcodeScannerState.SCANNING || estado === Html5QrcodeScannerState.PAUSED));
+      if (!corriendo) { limpiarYContinuar(); return; }
+      scanner.stop().then(limpiarYContinuar).catch(limpiarYContinuar);
+    } catch(e) { limpiarYContinuar(); }
+  }
+
+  function iniciarLectorCamara(cameraId) {
+    const config = {
+      fps: 30,
+      qrbox: (viewfinderWidth, viewfinderHeight) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const w = Math.floor(minEdge * 0.82);
+        const h = Math.floor(w * 0.5);
+        return { width: w, height: h };
+      },
+      aspectRatio: 1.333,
+      disableFlip: false,
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.CODABAR,
+      ]
+    };
+
+    const intentosConstraints = cameraId ? [
+      { deviceId: { exact: cameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      true,
+    ] : [
+      { facingMode: { exact: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      { facingMode: 'environment' },
+      true,
+    ];
+
+    const onArranqueOk = () => {
+      ocultarEstadoCamara();
+      document.getElementById('scannerControls').style.display = 'block';
+      aplicarFiltrosCamara();
+      torchActivo = false;
+      const btnLinterna = document.getElementById('btnLinterna');
+      btnLinterna.style.display = 'none';
+      btnLinterna.classList.remove('primary-btn');
+      btnLinterna.classList.add('secondary-btn');
+      try {
+        const video = document.querySelector('#interactiveScanner video');
+        if (video && video.srcObject) {
+          const track = video.srcObject.getVideoTracks()[0];
+          if (track && track.applyConstraints) track.applyConstraints({ advanced: [{ focusMode: 'continuous', zoom: 1 }] }).catch(()=>{});
+          const capabilities = track && track.getCapabilities ? track.getCapabilities() : null;
+          if (capabilities && capabilities.torch) btnLinterna.style.display = 'inline-flex';
+        }
+      } catch(e) {}
+      if (!cameraId) cargarListaCamarasParaSelector();
+      iniciarEscaneoMejoradoBackground();
+    };
+
+    intentarArrancarCamara(intentosConstraints, 0, config, registrarCodigoContinuo, onArranqueOk, null);
+  }
+
+  function intentarArrancarCamara(intentos, idx, config, onDecoded, onArranqueOk, ultimoError) {
+    if (idx >= intentos.length) {
+      const esPermisoDenegado = ultimoError && (ultimoError.name === 'NotAllowedError' || ultimoError.name === 'PermissionDeniedError');
+      const esSinCamara = ultimoError && (ultimoError.name === 'NotFoundError' || ultimoError.name === 'DevicesNotFoundError');
+      const esTimeout = ultimoError && ultimoError.name === 'TimeoutError';
+      const msg = esPermisoDenegado
+        ? 'Permisos de cámara denegados. Toca el ícono de candado junto a la URL → Permisos → Cámara → Permitir, y vuelve a intentar.'
+        : esSinCamara ? 'No se encontraron cámaras en este dispositivo.'
+        : esTimeout ? 'El navegador no respondió a la solicitud de cámara. Es muy probable que esté bloqueada en la configuración del sitio, o que otra app/pestaña la esté usando.'
+        : 'No se pudo iniciar la cámara. Cierra otras apps/pestañas que puedan estar usándola e inténtalo de nuevo.';
+      console.error('[Escáner] Todos los intentos fallaron. Último error:', ultimoError);
+      mostrarEstadoCamara(msg, 'error');
+      showToast(msg, 'error');
+      safeStopScanner();
+      html5QrScanner = null;
+      return;
+    }
+
+    try { if (html5QrScanner) html5QrScanner.clear(); } catch(e) {}
+    html5QrScanner = new Html5Qrcode("interactiveScanner");
+
+    mostrarEstadoCamara(
+      idx === 0 ? 'Solicitando acceso a la cámara...' : `Probando cámara alternativa (intento ${idx + 1} de ${intentos.length})...`,
+      'info'
+    );
+
+    let yaResuelto = false;
+    const startPromise = html5QrScanner.start(intentos[idx], config, onDecoded, () => {});
+
+    const watchdogId = setTimeout(() => {
+      if (yaResuelto) return;
+      yaResuelto = true;
+      const errTimeout = new Error('La cámara no respondió a tiempo.');
+      errTimeout.name = 'TimeoutError';
+      intentarArrancarCamara(intentos, idx + 1, config, onDecoded, onArranqueOk, errTimeout);
+    }, 9000);
+
+    startPromise.then(() => {
+      if (yaResuelto) { try { html5QrScanner && html5QrScanner.stop().catch(()=>{}); } catch(e) {} return; }
+      yaResuelto = true;
+      clearTimeout(watchdogId);
+      onArranqueOk();
+    }).catch((err) => {
+      if (yaResuelto) return;
+      yaResuelto = true;
+      clearTimeout(watchdogId);
+      setTimeout(() => { intentarArrancarCamara(intentos, idx + 1, config, onDecoded, onArranqueOk, err); }, 350);
+    });
+  }
+
+  function aplicarFiltrosCamara() {
+    const b  = document.getElementById('ctrl_brightness')?.value  || 1.4;
+    const c  = document.getElementById('ctrl_contrast')?.value    || 2;
+    const s  = document.getElementById('ctrl_sharpen')?.value     || 1;
+    const gr = document.getElementById('ctrl_grayscale')?.value   || 0;
+    const video = document.querySelector('#interactiveScanner video');
+    if (video) {
+      const sharpenContrast = parseFloat(c) + parseFloat(s) * 0.3;
+      video.style.filter = `brightness(${b}) contrast(${sharpenContrast}) grayscale(${gr})`;
+      video.style.imageRendering = 'crisp-edges';
+    }
+  }
+  function resetearFiltros() {
+    document.getElementById('ctrl_brightness').value = '1.4';
+    document.getElementById('ctrl_contrast').value   = '2';
+    document.getElementById('ctrl_sharpen').value    = '1';
+    document.getElementById('ctrl_grayscale').value  = '0';
+    aplicarFiltrosCamara();
+  }
+
+  async function capturarFotoYLeer() {
+    const video = document.querySelector('#interactiveScanner video');
+    if (!video) return showToast('Cámara no activa.', 'warning');
+    const btn = document.getElementById('btnFotoCaptura');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando...';
+    bgScanOcupado = true;
+
+    const canvas = document.getElementById('scanCanvas');
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    const b  = document.getElementById('ctrl_brightness')?.value  || 1.4;
+    const c  = document.getElementById('ctrl_contrast')?.value    || 2;
+    const gr = document.getElementById('ctrl_grayscale')?.value   || 0;
+    ctx.filter = `brightness(${b}) contrast(${c}) grayscale(${Math.max(gr, 0.5)})`;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], 'capture.png', { type: 'image/png' });
+        const scanner = new Html5Qrcode('scanCanvas', false);
+        try {
+          const result = await scanner.scanFile(file, false);
+          scanner.clear();
+          registrarCodigoContinuo(result);
+        } catch(err) {
+          scanner.clear();
+          showToast('No se detectó código en la foto. Ajusta brillo/contraste e intenta de nuevo.', 'warning');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-camera-retro"></i> Capturar foto';
+          bgScanOcupado = false;
+        }
+      }, 'image/png');
+    } catch(e) {
+      showToast('Error al capturar imagen.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-camera-retro"></i> Capturar foto';
+      bgScanOcupado = false;
+    }
+  }
+
+  function alternarLinterna() {
+    try {
+      const video = document.querySelector('#interactiveScanner video');
+      const track = video && video.srcObject && video.srcObject.getVideoTracks()[0];
+      if (!track || !track.applyConstraints) return;
+      torchActivo = !torchActivo;
+      track.applyConstraints({ advanced: [{ torch: torchActivo }] }).then(() => {
+        const btn = document.getElementById('btnLinterna');
+        btn.classList.toggle('primary-btn', torchActivo);
+        btn.classList.toggle('secondary-btn', !torchActivo);
+      }).catch(() => {
+        torchActivo = !torchActivo;
+        showToast('No se pudo controlar la linterna en este dispositivo.', 'warning');
+      });
+    } catch(e) {}
+  }
+
+  function detenerCamaraEscaneo() {
+    document.getElementById('scannerModal').classList.add('hidden');
+    safeStopScanner();
+    html5QrScanner = null;
+    torchActivo = false;
+    detenerEscaneoMejoradoBackground();
+    ocultarEstadoCamara();
+  }
+
+  // ── INIT ──
+  document.addEventListener('DOMContentLoaded', async () => {
+    await Promise.all([cargarInventarioEntrada(), cargarConfigCodigoBarras()]);
+    document.getElementById('ei_query').focus();
+  });
+</script>
+</body>
+</html>

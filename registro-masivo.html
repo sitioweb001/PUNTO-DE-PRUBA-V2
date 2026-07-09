@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -213,6 +214,8 @@
 
   let categoriasGlobal = [];
   let pendientes = [];
+  let inventarioProductosGlobal = []; // [{nombre, codigo}] — productos ya guardados en el sistema
+  let configIgnorarCerosCodigo = false;
   let html5QrScanner = null;
   let availableCameras = [];
   let selectedCameraId = null;
@@ -306,6 +309,12 @@
     };
     if (!item.nombre) return showToast('El nombre del producto es obligatorio.', 'warning');
     if (!item.categoria) return showToast('Selecciona una categoría.', 'warning');
+    if (item.codigo) {
+      const colision = buscarColisionDeCodigo(item.codigo, -1);
+      if (colision) {
+        return showToast(`Ese código ya lo tiene "${colision.nombre}" (${colision.origen}). El lector los confundiría: usa otro código.`, 'warning');
+      }
+    }
     pendientes.push(item);
     guardarPendientesLocal();
     renderTablaPendientes();
@@ -315,9 +324,76 @@
     document.getElementById('p_codigo').focus();
   });
 
+  // ── CÓDIGOS EXISTENTES + config (para detectar de verdad choques de código) ──
+  async function cargarInventarioCodigos() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getInventario`).then(r => r.json());
+      if (res.status === 'success') inventarioProductosGlobal = res.data.map(p => ({ nombre: p.nombre || '', codigo: p['código'] || p.codigo || '' }));
+    } catch(e) { inventarioProductosGlobal = []; }
+  }
+
+  async function cargarConfigCodigoBarras() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getConfigCodigoBarras`).then(r => r.json());
+      configIgnorarCerosCodigo = res.status === 'success' ? !!res.activo : false;
+    } catch(e) { configIgnorarCerosCodigo = false; }
+  }
+
+  // Misma normalización que usa el sistema principal (index.html / Code.gs)
+  // para comparar códigos: si el interruptor de Ajustes está activado,
+  // ignora los ceros a la izquierda de ambos lados.
+  function normalizarCodigoLocal(codigo) {
+    const c = String(codigo == null ? '' : codigo).trim().toLowerCase();
+    if (!configIgnorarCerosCodigo) return c;
+    return c.replace(/^0+(?=.)/, '');
+  }
+
+  // Busca si `codigo` ya lo usa otro producto: primero contra lo que ya está
+  // guardado en el sistema, y luego contra el resto de la lista en cola
+  // (para no dejar registrar dos productos nuevos con el mismo código en el
+  // mismo lote). `indiceExcluir` es la posición propia dentro de `pendientes`
+  // cuando se revisa la lista completa antes de enviarla al servidor.
+  function buscarColisionDeCodigo(codigo, indiceExcluir) {
+    const codStr = String(codigo || '').trim();
+    if (!codStr) return null;
+    const norm = normalizarCodigoLocal(codStr);
+    const enSistema = inventarioProductosGlobal.find(p => normalizarCodigoLocal(p.codigo) === norm);
+    if (enSistema) return { nombre: enSistema.nombre, codigo: enSistema.codigo, origen: 'ya registrado en el sistema' };
+    for (let i = 0; i < pendientes.length; i++) {
+      if (i === indiceExcluir) continue;
+      if (normalizarCodigoLocal(pendientes[i].codigo) === norm) {
+        return { nombre: pendientes[i].nombre, codigo: pendientes[i].codigo, origen: 'en tu misma lista, agregado antes' };
+      }
+    }
+    return null;
+  }
+
   // ── REGISTRAR TODO EN LA BASE DE DATOS (en un solo lote) ──
   async function registrarTodoEnBD() {
     if (!pendientes.length) return;
+
+    // Se refresca el inventario justo antes de enviar, por si algo cambió en
+    // el sistema principal desde que se cargó la página (otro dispositivo
+    // agregó productos, etc.), y se revisa CADA código de la lista contra la
+    // base de datos y contra el resto de la lista. Si hay choques, se
+    // bloquea el envío — ya no se puede "ignorar y aceptar" como antes.
+    showSpinner('Verificando códigos...');
+    await cargarInventarioCodigos();
+    hideSpinner();
+    const conflictos = [];
+    pendientes.forEach((p, i) => {
+      const colision = buscarColisionDeCodigo(p.codigo, i);
+      if (colision) conflictos.push(`• "${p.nombre}" (código "${p.codigo}") choca con "${colision.nombre}" (${colision.origen})`);
+    });
+    if (conflictos.length) {
+      alert(
+        'No se puede registrar todavía: estos códigos chocarían con otro producto y el lector de código de barras se confundiría:\n\n' +
+        conflictos.join('\n') +
+        '\n\nCorrige o borra esos productos de la lista y vuelve a intentarlo.'
+      );
+      return;
+    }
+
     if (!confirm(`¿Registrar ${pendientes.length} producto(s) directamente en la base de datos?`)) return;
     showSpinner('Registrando productos...');
     try {
@@ -328,6 +404,7 @@
         pendientes = [];
         guardarPendientesLocal();
         renderTablaPendientes();
+        await cargarInventarioCodigos();
       } else { showToast(res.message || 'Error al registrar los productos.', 'error'); }
     } catch(e) { hideSpinner(); showToast('Error de conexión con el servidor.', 'error'); }
   }
@@ -823,11 +900,26 @@
   }
 
 
+  // Si se llega desde "Control de Entrada de Inventario" con un código que
+  // no coincidió con ningún producto (?codigo=XXXX), se precarga el campo
+  // para no tener que volver a escanearlo ni escribirlo a mano.
+  function precargarCodigoDesdeURL() {
+    const params = new URLSearchParams(window.location.search);
+    const codigo = params.get('codigo');
+    if (!codigo) return;
+    document.getElementById('p_codigo').value = codigo;
+    document.getElementById('p_nombre').focus();
+    showToast('Código precargado desde Control de Entrada: ' + codigo, 'success');
+  }
+
   // ── INIT ──
   document.addEventListener('DOMContentLoaded', () => {
     cargarPendientesLocal();
     renderTablaPendientes();
     cargarCategorias();
+    cargarInventarioCodigos();
+    cargarConfigCodigoBarras();
+    precargarCodigoDesdeURL();
   });
 </script>
 </body>
