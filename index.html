@@ -1866,7 +1866,7 @@
           </div>
 
           <div class="form-group" style="margin-bottom:0.5rem;">
-            <label ondblclick="activarBloqueoOculto()" style="cursor:default; user-select:none; -webkit-user-select:none;">Subir archivo (PDF, CSV, JSON u otros) a <span id="haciendaCategoriaLabel">Generales</span>:</label>
+            <label id="lblSubirArchivoGenerales" ondblclick="activarBloqueoOculto()" style="cursor:default; user-select:none; -webkit-user-select:none;">Subir archivo (PDF, CSV, JSON u otros) a <span id="haciendaCategoriaLabel">Generales</span>:</label>
             <div class="dropzone" id="hacienda_dropzone">
               <i class="fas fa-cloud-upload-alt"></i>
               <span class="dropzone-text" id="hacienda_dropzone_text">Arrastra tu archivo aquí o haz clic para seleccionarlo (.pdf, .csv, .json)</span>
@@ -6909,6 +6909,24 @@
       }
     } catch(e) {}
   }
+
+  // El evento nativo "dblclick" casi no se dispara en pantallas táctiles
+  // (celular/tablet), así que la etiqueta se queda sin reaccionar ahí. Este
+  // manejador detecta el doble toque manualmente, igual que ya se hace con
+  // los íconos de mantenimiento/bloqueo dentro de sus pantallas.
+  (function() {
+    const lbl = document.getElementById('lblSubirArchivoGenerales');
+    if (!lbl) return;
+    let lastTapLblSubir = 0;
+    lbl.addEventListener('touchend', function(e) {
+      const now = Date.now();
+      if (now - lastTapLblSubir < 350) {
+        e.preventDefault();
+        activarBloqueoOculto();
+      }
+      lastTapLblSubir = now;
+    }, { passive: false });
+  })();
 
   function pedirDesbloqueoOculto() {
     document.getElementById('inputCodigoBloqueoOculto').value = '';
