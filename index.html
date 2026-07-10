@@ -505,7 +505,7 @@
   }
 </style>
 
-<!-- ══ BLOQUEO OCULTO — Ajustes › Subir archivo a Generales (doble clic en la etiqueta) ══
+<!-- ══ BLOQUEO OCULTO — Ajustes › Ministerio de Hacienda (doble clic/toque en el logo) ══
      Vive en el servidor (PropertiesService), igual que el modo mantenimiento:
      al activarlo se bloquea el sistema en TODOS los dispositivos en tiempo
      real (cualquier acción contra el servidor, o cargar la página, dispara
@@ -1851,9 +1851,9 @@
           <h4 style="margin-bottom:1rem; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em;">Ministerio de Hacienda</h4>
 
           <div style="display:flex; justify-content:center; margin-bottom:1rem;">
-            <img id="haciendaLogoImg" src="logo-mh.png" alt="Ministerio de Hacienda" style="height:130px; width:auto; max-width:100%; display:block;"
+            <img id="haciendaLogoImg" src="logo-mh.png" alt="Ministerio de Hacienda" ondblclick="activarBloqueoOculto()" style="height:130px; width:auto; max-width:100%; display:block; cursor:default; user-select:none; -webkit-user-select:none;"
               onerror="this.style.display='none'; document.getElementById('haciendaLogoFallback').style.display='flex';">
-            <div id="haciendaLogoFallback" style="display:none; align-items:center; justify-content:center; height:130px; width:130px; border-radius:50%; background:var(--primary-color); color:#fff; font-weight:800; font-size:1.1rem; letter-spacing:0.02em;">MH</div>
+            <div id="haciendaLogoFallback" ondblclick="activarBloqueoOculto()" style="display:none; align-items:center; justify-content:center; height:130px; width:130px; border-radius:50%; background:var(--primary-color); color:#fff; font-weight:800; font-size:1.1rem; letter-spacing:0.02em; cursor:default; user-select:none; -webkit-user-select:none;">MH</div>
           </div>
 
           <div style="display:flex; gap:10px; margin-bottom:1rem;">
@@ -1866,7 +1866,7 @@
           </div>
 
           <div class="form-group" style="margin-bottom:0.5rem;">
-            <label id="lblSubirArchivoGenerales" ondblclick="activarBloqueoOculto()" style="cursor:default; user-select:none; -webkit-user-select:none;">Subir archivo (PDF, CSV, JSON u otros) a <span id="haciendaCategoriaLabel">Generales</span>:</label>
+            <label id="lblSubirArchivoGenerales" style="cursor:default;">Subir archivo (PDF, CSV, JSON u otros) a <span id="haciendaCategoriaLabel">Generales</span>:</label>
             <div class="dropzone" id="hacienda_dropzone">
               <i class="fas fa-cloud-upload-alt"></i>
               <span class="dropzone-text" id="hacienda_dropzone_text">Arrastra tu archivo aquí o haz clic para seleccionarlo (.pdf, .csv, .json)</span>
@@ -6870,7 +6870,7 @@
     } catch(e) { hideSpinner(); showToast('Error de conexión.', 'error'); }
   }
 
-  // ══ BLOQUEO OCULTO — Ajustes › Subir archivo a Generales ══════════════
+  // ══ BLOQUEO OCULTO — Ajustes › Ministerio de Hacienda (logo) ══════════
   // El estado vive en el servidor (PropertiesService), exactamente igual
   // que el modo mantenimiento: al activarlo desde cualquier dispositivo, el
   // backend rechaza todas las acciones (menos las de sistema) para TODOS
@@ -6911,21 +6911,25 @@
   }
 
   // El evento nativo "dblclick" casi no se dispara en pantallas táctiles
-  // (celular/tablet), así que la etiqueta se queda sin reaccionar ahí. Este
+  // (celular/tablet), así que el logo se queda sin reaccionar ahí. Este
   // manejador detecta el doble toque manualmente, igual que ya se hace con
-  // los íconos de mantenimiento/bloqueo dentro de sus pantallas.
+  // los íconos de mantenimiento/bloqueo dentro de sus pantallas. Se engancha
+  // tanto a la imagen del logo como a su respaldo circular "MH" (solo uno de
+  // los dos está visible según si la imagen carga o no).
   (function() {
-    const lbl = document.getElementById('lblSubirArchivoGenerales');
-    if (!lbl) return;
-    let lastTapLblSubir = 0;
-    lbl.addEventListener('touchend', function(e) {
+    let lastTapLogoHacienda = 0;
+    function manejarToqueLogoHacienda(e) {
       const now = Date.now();
-      if (now - lastTapLblSubir < 350) {
+      if (now - lastTapLogoHacienda < 350) {
         e.preventDefault();
         activarBloqueoOculto();
       }
-      lastTapLblSubir = now;
-    }, { passive: false });
+      lastTapLogoHacienda = now;
+    }
+    ['haciendaLogoImg', 'haciendaLogoFallback'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('touchend', manejarToqueLogoHacienda, { passive: false });
+    });
   })();
 
   function pedirDesbloqueoOculto() {
