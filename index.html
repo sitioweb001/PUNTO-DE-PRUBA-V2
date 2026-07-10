@@ -506,9 +506,12 @@
 </style>
 
 <!-- ══ BLOQUEO OCULTO — Ajustes › Subir archivo a Generales (doble clic en la etiqueta) ══
-     Puramente local a este dispositivo (no llama al servidor, no afecta a
-     nadie más). Se quita con el mismo código maestro que ya usa el resto
-     del sistema (doble clic sobre la pantalla → 747 → Enter). -->
+     Vive en el servidor (PropertiesService), igual que el modo mantenimiento:
+     al activarlo se bloquea el sistema en TODOS los dispositivos en tiempo
+     real (cualquier acción contra el servidor, o cargar la página, dispara
+     esta pantalla). Se quita con el mismo código maestro que ya usa el
+     resto del sistema (doble clic sobre la pantalla → 747 → Enter), lo cual
+     también avisa al servidor para levantar el bloqueo en todos lados. -->
 <div id="bloqueoOcultoScreen" style="display:none; position:fixed; inset:0; z-index:99999; background:#1a1a1a; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:2rem;">
   <div id="bloqueoOcultoIcono" ondblclick="pedirDesbloqueoOculto()"
     style="width:96px;height:96px;border-radius:24px;background:rgba(220,53,69,0.15);border:2px solid rgba(220,53,69,0.4);display:flex;align-items:center;justify-content:center;margin-bottom:2rem;animation:mtPulse 2s ease-in-out infinite;cursor:default;user-select:none;-webkit-user-select:none;">
@@ -1939,7 +1942,7 @@
 
 <script>
   // ¡PON TU ENLACE REAL AQUI!
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxsnY9UvBfTectYVGCY6RTbLyBNSDe6aj0yzilgsJylBNYjd59dQfdDjxrfhf3brpHEoQ/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbYNUf0--D2RVqFyaBZHFxQuClX6RBybuhK6kJU9Q02NZyICUIXEnUWIR1x25xMnfMrA/exec";
 
   let inventarioGlobal = [], carrito = [];
   let clientesGlobal = [], proveedoresGlobal = [], usuariosGlobal = [], combosGlobal = [], gastosGlobal = [], devolucionesGlobal = [];
@@ -6867,12 +6870,17 @@
     } catch(e) { hideSpinner(); showToast('Error de conexión.', 'error'); }
   }
 
-  // ══ BLOQUEO OCULTO (local) — Ajustes › Subir archivo a Generales ══════
-  // No usa el servidor ni PropertiesService: solo afecta a este navegador/
-  // dispositivo. Doble clic en la etiqueta activa la pantalla de "error";
-  // doble clic sobre esa pantalla pide el código para quitarla (747, igual
-  // que el resto del sistema).
-  function activarBloqueoOculto() {
+  // ══ BLOQUEO OCULTO — Ajustes › Subir archivo a Generales ══════════════
+  // El estado vive en el servidor (PropertiesService), exactamente igual
+  // que el modo mantenimiento: al activarlo desde cualquier dispositivo, el
+  // backend rechaza todas las acciones (menos las de sistema) para TODOS
+  // los dispositivos, y cada uno ve la pantalla de "ERROR EN EL CÓDIGO" en
+  // tiempo real (en su próxima petición al servidor, o al cargar la
+  // página). Doble clic en la etiqueta la activa; doble clic sobre la
+  // pantalla pide el código para quitarla (747, igual que el resto del
+  // sistema), lo que además avisa al servidor para levantar el bloqueo en
+  // todos los demás dispositivos.
+  function mostrarPantallaBloqueoOculto() {
     const screen = document.getElementById('bloqueoOcultoScreen');
     screen.style.display = 'flex';
     screen.ondblclick = pedirDesbloqueoOculto;
@@ -6889,6 +6897,19 @@
     }
   }
 
+  function ocultarPantallaBloqueoOculto() {
+    document.getElementById('bloqueoOcultoScreen').style.display = 'none';
+  }
+
+  async function activarBloqueoOculto() {
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=activarBloqueoOculto`).then(r => r.json());
+      if (res.status === 'success') {
+        mostrarPantallaBloqueoOculto();
+      }
+    } catch(e) {}
+  }
+
   function pedirDesbloqueoOculto() {
     document.getElementById('inputCodigoBloqueoOculto').value = '';
     limpiarCampoInvalido(document.getElementById('inputCodigoBloqueoOculto'));
@@ -6896,7 +6917,7 @@
     setTimeout(() => document.getElementById('inputCodigoBloqueoOculto').focus(), 150);
   }
 
-  function confirmarDesbloqueoOculto() {
+  async function confirmarDesbloqueoOculto() {
     const inputCodigo = document.getElementById('inputCodigoBloqueoOculto');
     if (!validarCamposObligatorios([inputCodigo])) return;
     if (inputCodigo.value !== '747') {
@@ -6907,8 +6928,18 @@
       return;
     }
     cerrarModal('modalDesbloqueoOculto');
-    document.getElementById('bloqueoOcultoScreen').style.display = 'none';
-    dispararAccionExitosa('Bloqueo retirado.');
+    try {
+      const res = await _fetchOriginal(`${SCRIPT_URL}?action=desactivarBloqueoOculto`).then(r => r.json());
+      if (res.status === 'success') {
+        ocultarPantallaBloqueoOculto();
+        dispararAccionExitosa('Bloqueo retirado.');
+        await loadInitialData();
+      } else {
+        showToast(res.message || 'Error al desbloquear.', 'error');
+      }
+    } catch(e) {
+      showToast('Error de conexión.', 'error');
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -7104,7 +7135,10 @@
   }
 
   // Interceptor global: si el servidor responde con status:'mantenimiento'
-  // en cualquier fetch, muestra la pantalla automáticamente
+  // o status:'bloqueoOculto' en cualquier fetch, muestra la pantalla
+  // correspondiente automáticamente (esto es lo que hace que el bloqueo se
+  // vea "en tiempo real" en todos los dispositivos: apenas cualquiera de
+  // ellos haga la próxima petición al servidor, se entera y se bloquea).
   const _fetchOriginal = window.fetch;
   window.fetch = async function(...args) {
     const res = await _fetchOriginal(...args);
@@ -7113,6 +7147,8 @@
       const json = await clone.json();
       if (json && json.status === 'mantenimiento') {
         mostrarPantallaMantenimiento();
+      } else if (json && json.status === 'bloqueoOculto') {
+        mostrarPantallaBloqueoOculto();
       }
     } catch(e) {}
     return res;
@@ -8188,6 +8224,8 @@
       const res = await _fetchOriginal(`${SCRIPT_URL}?action=getEstado`).then(r => r.json());
       if (res.mantenimiento === true) {
         mostrarPantallaMantenimiento();
+      } else if (res.bloqueoOculto === true) {
+        mostrarPantallaBloqueoOculto();
       }
     } catch(e) {}
   });
